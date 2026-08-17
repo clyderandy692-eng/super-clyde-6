@@ -5,6 +5,15 @@
 @custom-variant dark (&:is(.dark *));
 
 @theme inline {
+  --font-sans: var(--font-kanit), ui-sans-serif, system-ui, sans-serif;
+  --font-mono: var(--font-geist-mono), ui-monospace, monospace;
+
+  --color-brand: var(--brand);
+  --color-brand-soft: var(--brand-soft);
+  --color-brand-foreground: var(--brand-foreground);
+  --color-ink: var(--ink);
+  --color-surface: var(--surface);
+
   --color-sidebar-ring: var(--sidebar-ring);
   --color-sidebar-border: var(--sidebar-border);
   --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
@@ -22,6 +31,9 @@
   --color-input: var(--input);
   --color-border: var(--border);
   --color-destructive: var(--destructive);
+  --color-destructive-foreground: var(--destructive-foreground);
+  --color-success: var(--success);
+  --color-warning: var(--warning);
   --color-accent-foreground: var(--accent-foreground);
   --color-accent: var(--accent);
   --color-muted-foreground: var(--muted-foreground);
@@ -36,128 +48,497 @@
   --color-card: var(--card);
   --color-foreground: var(--foreground);
   --color-background: var(--background);
-  --radius-sm: calc(var(--radius) * 0.6);
-  --radius-md: calc(var(--radius) * 0.8);
+
+  --radius-sm: calc(var(--radius) * 0.5);
+  --radius-md: calc(var(--radius) * 0.75);
   --radius-lg: var(--radius);
-  --radius-xl: calc(var(--radius) * 1.4);
-  --radius-2xl: calc(var(--radius) * 1.8);
-  --radius-3xl: calc(var(--radius) * 2.2);
-  --radius-4xl: calc(var(--radius) * 2.6);
+  --radius-xl: calc(var(--radius) * 1.5);
+  --radius-2xl: calc(var(--radius) * 2);
+  --radius-3xl: calc(var(--radius) * 2.6);
 }
 
+/* ============================================================
+   CLYDE — identité unique
+   Fond clair #FAFAF8 · encre near-black · accent orange #FF6B35
+   ============================================================ */
 :root {
   color-scheme: light;
-  --background: oklch(1 0 0);
-  --foreground: oklch(0.145 0 0);
+
+  --background: oklch(0.982 0.004 85);
+  --foreground: oklch(0.185 0.008 60);
+  --ink: oklch(0.185 0.008 60);
+  --surface: oklch(1 0 0);
+
   --card: oklch(1 0 0);
-  --card-foreground: oklch(0.145 0 0);
+  --card-foreground: oklch(0.185 0.008 60);
   --popover: oklch(1 0 0);
-  --popover-foreground: oklch(0.145 0 0);
-  --primary: oklch(0.205 0 0);
-  --primary-foreground: oklch(0.985 0 0);
-  --secondary: oklch(0.97 0 0);
-  --secondary-foreground: oklch(0.205 0 0);
-  --muted: oklch(0.97 0 0);
-  --muted-foreground: oklch(0.556 0 0);
-  --accent: oklch(0.97 0 0);
-  --accent-foreground: oklch(0.205 0 0);
-  --destructive: oklch(0.577 0.245 27.325);
-  --border: oklch(0.922 0 0);
-  --input: oklch(0.922 0 0);
-  --ring: oklch(0.708 0 0);
-  --chart-1: oklch(0.87 0 0);
-  --chart-2: oklch(0.556 0 0);
-  --chart-3: oklch(0.439 0 0);
-  --chart-4: oklch(0.371 0 0);
-  --chart-5: oklch(0.269 0 0);
-  --radius: 0.625rem;
-  --sidebar: oklch(0.985 0 0);
-  --sidebar-foreground: oklch(0.145 0 0);
-  --sidebar-primary: oklch(0.205 0 0);
-  --sidebar-primary-foreground: oklch(0.985 0 0);
-  --sidebar-accent: oklch(0.97 0 0);
-  --sidebar-accent-foreground: oklch(0.205 0 0);
-  --sidebar-border: oklch(0.922 0 0);
-  --sidebar-ring: oklch(0.708 0 0);
+  --popover-foreground: oklch(0.185 0.008 60);
+
+  --primary: oklch(0.185 0.008 60);
+  --primary-foreground: oklch(0.99 0.003 85);
+  --secondary: oklch(0.945 0.006 85);
+  --secondary-foreground: oklch(0.185 0.008 60);
+
+  --muted: oklch(0.945 0.006 85);
+  --muted-foreground: oklch(0.505 0.012 65);
+
+  --brand: oklch(0.672 0.196 39);
+  --brand-soft: oklch(0.815 0.106 46);
+  --brand-foreground: oklch(0.99 0.003 85);
+
+  --accent: oklch(0.955 0.028 46);
+  --accent-foreground: oklch(0.42 0.15 39);
+
+  --destructive: oklch(0.582 0.211 24);
+  --destructive-foreground: oklch(0.99 0.003 85);
+  --success: oklch(0.6 0.15 152);
+  --warning: oklch(0.76 0.15 78);
+
+  --border: oklch(0.185 0.008 60 / 13%);
+  --input: oklch(0.185 0.008 60 / 18%);
+  --ring: oklch(0.672 0.196 39);
+
+  --chart-1: oklch(0.672 0.196 39);
+  --chart-2: oklch(0.815 0.106 46);
+  --chart-3: oklch(0.185 0.008 60);
+  --chart-4: oklch(0.505 0.012 65);
+  --chart-5: oklch(0.885 0.008 85);
+
+  --radius: 0.875rem;
+
+  --sidebar: oklch(1 0 0);
+  --sidebar-foreground: oklch(0.185 0.008 60);
+  --sidebar-primary: oklch(0.672 0.196 39);
+  --sidebar-primary-foreground: oklch(0.99 0.003 85);
+  --sidebar-accent: oklch(0.955 0.028 46);
+  --sidebar-accent-foreground: oklch(0.42 0.15 39);
+  --sidebar-border: oklch(0.185 0.008 60 / 10%);
+  --sidebar-ring: oklch(0.672 0.196 39);
 }
 
+/* Mode sombre — en option, jamais par défaut (plan §16) */
 .dark {
   color-scheme: dark;
-  --background: oklch(0.145 0 0);
-  --foreground: oklch(0.985 0 0);
-  --card: oklch(0.205 0 0);
-  --card-foreground: oklch(0.985 0 0);
-  --popover: oklch(0.205 0 0);
-  --popover-foreground: oklch(0.985 0 0);
-  --primary: oklch(0.922 0 0);
-  --primary-foreground: oklch(0.205 0 0);
-  --secondary: oklch(0.269 0 0);
-  --secondary-foreground: oklch(0.985 0 0);
-  --muted: oklch(0.269 0 0);
-  --muted-foreground: oklch(0.708 0 0);
-  --accent: oklch(0.269 0 0);
-  --accent-foreground: oklch(0.985 0 0);
-  --destructive: oklch(0.704 0.191 22.216);
-  --border: oklch(1 0 0 / 10%);
-  --input: oklch(1 0 0 / 15%);
-  --ring: oklch(0.556 0 0);
-  --chart-1: oklch(0.87 0 0);
-  --chart-2: oklch(0.556 0 0);
-  --chart-3: oklch(0.439 0 0);
-  --chart-4: oklch(0.371 0 0);
-  --chart-5: oklch(0.269 0 0);
-  --sidebar: oklch(0.205 0 0);
-  --sidebar-foreground: oklch(0.985 0 0);
-  --sidebar-primary: oklch(0.488 0.243 264.376);
-  --sidebar-primary-foreground: oklch(0.985 0 0);
-  --sidebar-accent: oklch(0.269 0 0);
-  --sidebar-accent-foreground: oklch(0.985 0 0);
-  --sidebar-border: oklch(1 0 0 / 10%);
-  --sidebar-ring: oklch(0.556 0 0);
-}
 
-@media (prefers-color-scheme: dark) {
-  :root:not(.light) {
-    color-scheme: dark;
-    --background: oklch(0.145 0 0);
-    --foreground: oklch(0.985 0 0);
-    --card: oklch(0.205 0 0);
-    --card-foreground: oklch(0.985 0 0);
-    --popover: oklch(0.205 0 0);
-    --popover-foreground: oklch(0.985 0 0);
-    --primary: oklch(0.922 0 0);
-    --primary-foreground: oklch(0.205 0 0);
-    --secondary: oklch(0.269 0 0);
-    --secondary-foreground: oklch(0.985 0 0);
-    --muted: oklch(0.269 0 0);
-    --muted-foreground: oklch(0.708 0 0);
-    --accent: oklch(0.269 0 0);
-    --accent-foreground: oklch(0.985 0 0);
-    --destructive: oklch(0.704 0.191 22.216);
-    --border: oklch(1 0 0 / 10%);
-    --input: oklch(1 0 0 / 15%);
-    --ring: oklch(0.556 0 0);
-    --chart-1: oklch(0.87 0 0);
-    --chart-2: oklch(0.556 0 0);
-    --chart-3: oklch(0.439 0 0);
-    --chart-4: oklch(0.371 0 0);
-    --chart-5: oklch(0.269 0 0);
-    --sidebar: oklch(0.205 0 0);
-    --sidebar-foreground: oklch(0.985 0 0);
-    --sidebar-primary: oklch(0.488 0.243 264.376);
-    --sidebar-primary-foreground: oklch(0.985 0 0);
-    --sidebar-accent: oklch(0.269 0 0);
-    --sidebar-accent-foreground: oklch(0.985 0 0);
-    --sidebar-border: oklch(1 0 0 / 10%);
-    --sidebar-ring: oklch(0.556 0 0);
-  }
+  --background: oklch(0.165 0.008 60);
+  --foreground: oklch(0.965 0.004 85);
+  --ink: oklch(0.965 0.004 85);
+  --surface: oklch(0.215 0.009 60);
+
+  --card: oklch(0.215 0.009 60);
+  --card-foreground: oklch(0.965 0.004 85);
+  --popover: oklch(0.215 0.009 60);
+  --popover-foreground: oklch(0.965 0.004 85);
+
+  --primary: oklch(0.965 0.004 85);
+  --primary-foreground: oklch(0.165 0.008 60);
+  --secondary: oklch(0.265 0.01 60);
+  --secondary-foreground: oklch(0.965 0.004 85);
+
+  --muted: oklch(0.265 0.01 60);
+  --muted-foreground: oklch(0.712 0.012 70);
+
+  --brand: oklch(0.712 0.185 41);
+  --brand-soft: oklch(0.815 0.106 46);
+  --brand-foreground: oklch(0.165 0.008 60);
+
+  --accent: oklch(0.3 0.05 44);
+  --accent-foreground: oklch(0.85 0.12 46);
+
+  --border: oklch(1 0 0 / 12%);
+  --input: oklch(1 0 0 / 16%);
+  --ring: oklch(0.712 0.185 41);
+
+  --chart-3: oklch(0.965 0.004 85);
+  --chart-5: oklch(0.32 0.01 60);
+
+  --sidebar: oklch(0.215 0.009 60);
+  --sidebar-foreground: oklch(0.965 0.004 85);
+  --sidebar-accent: oklch(0.3 0.05 44);
+  --sidebar-accent-foreground: oklch(0.85 0.12 46);
+  --sidebar-border: oklch(1 0 0 / 10%);
 }
 
 @layer base {
   * {
     @apply border-border outline-ring/50;
   }
+  /* Aucune page ne doit jamais déborder horizontalement : sur mobile, un seul
+     élément trop large fait apparaître une barre de défilement latérale et
+     décale toute la mise en page. Les rails volontaires (chips, carrousels)
+     gèrent leur propre `overflow-x-auto` en interne, ils ne sont pas affectés. */
+  html,
+  body {
+    max-width: 100%;
+    overflow-x: clip;
+  }
+  /* Les menus de la landing naviguent par ancres : sans défilement doux, le
+     saut est instantané et l'utilisateur ne comprend pas où il a atterri —
+     plusieurs appuis semblaient « ne pas marcher ». La préférence
+     reduced-motion plus bas repasse en `auto` pour qui le demande. */
+  html {
+    scroll-behavior: smooth;
+  }
+  /* La barre du haut est fixe : sans cette marge, chaque section visée par
+     une ancre se retrouvait avec son titre caché dessous. */
+  [id] {
+    scroll-margin-top: 6rem;
+  }
   body {
     @apply bg-background text-foreground;
+    -webkit-font-smoothing: antialiased;
+  }
+  /* Un média ne dépasse jamais son conteneur. */
+  img,
+  video,
+  canvas,
+  svg,
+  iframe {
+    max-width: 100%;
+  }
+  /* Cible tactile minimale sur les contrôles interactifs compacts */
+  button,
+  [role='button'],
+  a,
+  input,
+  select,
+  textarea {
+    touch-action: manipulation;
+  }
+
+  /* Un libellé qui passe à la ligne reste aligné comme sa première ligne.
+     Sur un bouton dont le contenu est centré, les lignes suivantes se collaient
+     à gauche : le libellé paraissait décalé dans son cadre. Le retour à la ligne
+     est le bon comportement — mieux qu'un texte tronqué ou qui déborde — mais il
+     doit rester centré.
+
+     La règle ne vise que les éléments interactifs qui centrent DÉJÀ leur
+     contenu (`justify-center`) : les lignes d'un menu ou d'une liste, alignées
+     à gauche dès la première ligne, ne sont pas touchées. `:where()` maintient
+     une spécificité nulle, donc un `text-left` explicite l'emporte toujours. */
+  :where(button, [role='button'], a, label, summary).justify-center {
+    text-align: center;
+  }
+}
+
+/* ============================================================
+   Aperçus produit : toujours clairs, héritent du --brand courant
+   ============================================================ */
+.clyde-mock {
+  color-scheme: light;
+  --background: oklch(1 0 0);
+  --foreground: oklch(0.2 0.008 60);
+  --card: oklch(1 0 0);
+  --card-foreground: oklch(0.2 0.008 60);
+  --muted: oklch(0.965 0.004 85);
+  --muted-foreground: oklch(0.545 0.012 65);
+  --border: oklch(0.9 0.004 85);
+  --radius: 0.75rem;
+  color: var(--foreground);
+  background-color: var(--background);
+}
+
+/* ============================================================
+   Verre dépoli — réservé aux couches flottantes (nav, menus)
+   ============================================================ */
+.clyde-glass {
+  background-color: color-mix(in oklab, var(--surface) 72%, transparent);
+  backdrop-filter: blur(24px) saturate(180%);
+  -webkit-backdrop-filter: blur(24px) saturate(180%);
+  border: 1px solid color-mix(in oklab, var(--foreground) 10%, transparent);
+  box-shadow:
+    0 1px 0 0 color-mix(in oklab, var(--surface) 60%, transparent) inset,
+    0 18px 40px -12px color-mix(in oklab, var(--foreground) 28%, transparent);
+}
+
+/* ============================================================
+   Révélation au scroll
+   ============================================================ */
+/* Les blocs à révéler partent invisibles. Trois garde-fous garantissent qu'ils
+   ne peuvent PAS rester masqués (cause de la page blanche) :
+   1. `REVEAL_SCRIPT` (dans le <head>, avant l'hydratation) révèle tout ce qui
+      est déjà à l'écran dès que le HTML est analysé ;
+   2. son minuteur de secours révèle le reste au bout de 2 s ;
+   3. le <noscript> du layout neutralise ces états si JS est absent.
+   Le contenu du premier écran utilise la variante `priority` ci-dessous, qui
+   ne masque rien : voir son commentaire. */
+[data-reveal] {
+  opacity: 0;
+  transition:
+    opacity 0.7s cubic-bezier(0.16, 1, 0.3, 1),
+    transform 0.8s cubic-bezier(0.16, 1, 0.3, 1),
+    filter 0.8s cubic-bezier(0.16, 1, 0.3, 1);
+  transition-delay: var(--reveal-delay, 0ms);
+}
+[data-reveal='up'] {
+  transform: translate3d(0, 26px, 0);
+}
+[data-reveal='blur'] {
+  transform: translate3d(0, 12px, 0);
+  filter: blur(9px);
+}
+[data-reveal='scale'] {
+  transform: scale(0.95) translate3d(0, 18px, 0);
+}
+/* Contenu du premier écran : il glisse, mais il ne part JAMAIS de `opacity: 0`.
+   Un fondu sur le plus grand texte de la page repousse le LCP de toute sa
+   durée — mesuré à 2 s sur l'accueil — et fait passer pour lent un site dont le
+   HTML était prêt en 0,6 s. Le titre est donc lisible dès le premier rendu ;
+   seul son déplacement est animé. */
+[data-reveal='priority'] {
+  opacity: 1;
+  transform: translate3d(0, 14px, 0);
+}
+[data-reveal='left'] {
+  transform: translate3d(-30px, 0, 0);
+}
+[data-reveal='right'] {
+  transform: translate3d(30px, 0, 0);
+}
+/* L'état « révélé » se porte sur `data-in`, pas sur une classe.
+   `class` est l'attribut que React gère lui-même sur ces nœuds : quand le script
+   d'amorçage y ajoutait `is-in` avant l'hydratation, React constatait un écart
+   entre son rendu serveur et le DOM, l'annonçait en console et refusait de le
+   réconcilier. Le vrai risque n'était pas l'avertissement : au prochain rendu de
+   ce nœud — un changement FR/EN, par exemple — React réécrivait `className`
+   depuis ses props, emportait `is-in` avec lui, et le bloc redevenait invisible
+   pour de bon. `data-in` n'est jamais écrit par React, donc plus rien à
+   écraser ni à réconcilier. */
+[data-reveal][data-in] {
+  opacity: 1;
+  transform: none;
+  filter: none;
+  /* `will-change` n'est jamais posé en permanence : garder une couche GPU par
+     bloc révélé sature la mémoire vidéo sur mobile et ralentit le défilement. */
+  will-change: auto;
+}
+
+/* ============================================================
+   Animations
+   ============================================================ */
+@keyframes clyde-float {
+  0%,
+  100% {
+    transform: translate3d(0, 0, 0) rotate(var(--rot, 0deg));
+  }
+  50% {
+    transform: translate3d(0, calc(var(--amp, 10px) * -1), 0)
+      rotate(calc(var(--rot, 0deg) + 1.5deg));
+  }
+}
+@keyframes clyde-marquee {
+  from {
+    transform: translate3d(0, 0, 0);
+  }
+  to {
+    transform: translate3d(-50%, 0, 0);
+  }
+}
+@keyframes clyde-drift {
+  0%,
+  100% {
+    transform: translate3d(0, 0, 0) scale(1);
+  }
+  33% {
+    transform: translate3d(5%, -4%, 0) scale(1.07);
+  }
+  66% {
+    transform: translate3d(-4%, 3%, 0) scale(0.96);
+  }
+}
+/* Blob liquide du hero — morphing du path SVG (même nombre de commandes) */
+@keyframes clyde-blob {
+  0%,
+  100% {
+    d: path(
+      'M420 90C520 60 640 120 690 230C740 340 700 480 600 560C500 640 340 660 240 590C140 520 80 380 110 260C140 140 320 120 420 90Z'
+    );
+  }
+  25% {
+    d: path(
+      'M440 70C560 90 660 170 680 290C700 410 620 520 510 580C400 640 260 620 170 540C80 460 60 320 130 210C200 100 320 50 440 70Z'
+    );
+  }
+  50% {
+    d: path(
+      'M400 110C530 100 660 150 700 270C740 390 660 510 550 570C440 630 290 640 190 560C90 480 90 330 150 220C210 110 270 120 400 110Z'
+    );
+  }
+  75% {
+    d: path(
+      'M460 100C570 130 650 200 670 320C690 440 610 540 490 590C370 640 240 600 160 510C80 420 90 290 170 200C250 110 350 70 460 100Z'
+    );
+  }
+}
+.clyde-blob {
+  animation: clyde-blob 11s ease-in-out infinite;
+}
+
+@keyframes clyde-blob-light {
+  0%,
+  100% {
+    opacity: 0.72;
+    transform: scale(0.985);
+  }
+  50% {
+    opacity: 1;
+    transform: scale(1.025);
+  }
+}
+
+@keyframes clyde-blob-glow {
+  0%,
+  100% {
+    opacity: 0.08;
+    transform: scale(0.92);
+  }
+  50% {
+    opacity: 0.24;
+    transform: scale(1.08);
+  }
+}
+
+.clyde-blob-stage::after {
+  position: absolute;
+  width: 72%;
+  height: 58%;
+  border-radius: 999px;
+  background: radial-gradient(circle, rgba(255, 107, 53, 0.38), transparent 68%);
+  content: '';
+  filter: blur(28px);
+  animation: clyde-blob-glow 5.8s ease-in-out infinite;
+}
+
+.clyde-blob-stage svg {
+  position: relative;
+  z-index: 1;
+  animation: clyde-blob-light 7.5s ease-in-out infinite;
+  transform-origin: center;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .clyde-blob-stage::after,
+  .clyde-blob-stage svg {
+    animation: none;
+  }
+}
+
+@keyframes clyde-pulse-ring {
+  0% {
+    transform: scale(0.85);
+    opacity: 0.6;
+  }
+  100% {
+    transform: scale(1.85);
+    opacity: 0;
+  }
+}
+@keyframes clyde-caret {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0;
+  }
+}
+@keyframes clyde-sheet-in {
+  from {
+    transform: translate3d(0, 100%, 0);
+  }
+  to {
+    transform: translate3d(0, 0, 0);
+  }
+}
+@keyframes clyde-menu-in {
+  from {
+    opacity: 0;
+    transform: translate3d(0, -14px, 0) scale(0.97);
+  }
+  to {
+    opacity: 1;
+    transform: translate3d(0, 0, 0) scale(1);
+  }
+}
+@keyframes clyde-fade-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+.clyde-float {
+  animation: clyde-float var(--dur, 6s) ease-in-out infinite;
+  animation-delay: var(--delay, 0s);
+}
+.clyde-marquee {
+  animation: clyde-marquee var(--dur, 34s) linear infinite;
+}
+.clyde-drift {
+  animation: clyde-drift var(--dur, 18s) ease-in-out infinite;
+  animation-delay: var(--delay, 0s);
+}
+.clyde-caret {
+  animation: clyde-caret 1.1s step-end infinite;
+}
+.clyde-sheet-in {
+  animation: clyde-sheet-in 0.32s cubic-bezier(0.32, 0.72, 0, 1);
+}
+.clyde-menu-in {
+  animation: clyde-menu-in 0.26s cubic-bezier(0.16, 1, 0.3, 1);
+}
+.clyde-fade-in {
+  animation: clyde-fade-in 0.24s ease-out;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    scroll-behavior: auto !important;
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+  }
+}
+
+/* Navigation au clavier : anneau visible sur tout élément focalisable.
+   (Audit impeccable : aucun style de focus n'était défini — un utilisateur
+   au clavier ne voyait jamais où il se trouvait.) */
+:focus-visible {
+  outline: 2px solid var(--color-brand, #e05e10);
+  outline-offset: 2px;
+  border-radius: 4px;
+}
+
+/* Masquer la barre de défilement des rails horizontaux (chips, dates) */
+.clyde-no-scrollbar {
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+.clyde-no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  [data-reveal] {
+    opacity: 1 !important;
+    transform: none !important;
+    filter: none !important;
+  }
+  .clyde-float,
+  .clyde-marquee,
+  .clyde-blob,
+  .clyde-drift,
+  .clyde-sheet-in,
+  .clyde-menu-in {
+    animation: none !important;
+  }
+  *,
+  *::before,
+  *::after {
+    transition-duration: 0.01ms !important;
   }
 }
