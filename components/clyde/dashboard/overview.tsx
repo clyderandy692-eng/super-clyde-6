@@ -473,7 +473,7 @@ function ActivationChecklist({
   onToggle,
 }: {
   business: { id: string; slug: string }
-  page: { published: boolean } | undefined
+  page: { published: boolean } | null | undefined
   productCount: number
   activationChecks: string[]
   onToggle: (businessId: string, step: string) => void

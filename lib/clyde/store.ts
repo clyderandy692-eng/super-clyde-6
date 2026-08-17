@@ -1941,6 +1941,12 @@ export const useClyde = create<ClydeState>()(
             delivery_address: r.delivery_address ?? null,
             size: r.size ?? null,
           })),
+          /* Conservées elles aussi : une vue ou une vente réellement écrite
+             par `track()`/`createOrder` est la preuve d'activité du
+             commerçant, pas un contenu de démonstration à repartir de zéro à
+             chaque montée de version. */
+          productStats: old?.productStats ?? [],
+          activationChecks: old?.activationChecks ?? [],
         }
       },
       /* On n'enregistre que ce que le visiteur a produit lui-même — comptes,
