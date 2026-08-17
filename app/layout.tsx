@@ -1,5 +1,6 @@
 import { Analytics } from '@vercel/analytics/next'
 import type { Metadata, Viewport } from 'next'
+import Script from 'next/script'
 import {
   Kanit,
   Geist_Mono,
@@ -94,18 +95,23 @@ export default function RootLayout({
       data-scroll-behavior="smooth"
       className={`light bg-background ${_kanit.variable} ${_mono.variable} ${_inter.variable} ${_playfair.variable} ${_space.variable} ${_lora.variable}`}
     >
-      <head>
+      <body className="font-sans antialiased">
         {/* Les animations d'entrée démarrent ici, avant l'hydratation de React.
-            Placé dans le <head>, ce script installe son observateur dès que le
-            HTML est analysé — le contenu visible apparaît donc au premier
-            rendu. Tant que cette logique attendait un `useEffect`, le titre
-            d'accueil restait invisible 2,5 s alors qu'il était prêt à 0,6 s. */}
-        <script
+            `beforeInteractive` fait injecter ce script par Next lui-même,
+            dans le `<head>` généré au tout premier rendu — sans qu'on ait à
+            écrire un `<script>` littéral dans notre propre JSX de `<head>`.
+            Un `<script>` posé à la main à cet endroit occupait la même
+            position que le script d'amorçage propre à la plateforme
+            d'aperçu, ce qui provoquait un écart d'hydratation React à cet
+            emplacement et cassait le chargement de la preview. Cette
+            stratégie garde le même bénéfice (le contenu visible apparaît dès
+            l'analyse du HTML, pas après hydratation) sans ce risque. */}
+        <Script
+          id="clyde-reveal"
+          strategy="beforeInteractive"
           // eslint-disable-next-line react/no-danger -- script pré-hydratation, contenu littéral sans donnée externe
           dangerouslySetInnerHTML={{ __html: REVEAL_SCRIPT }}
         />
-      </head>
-      <body className="font-sans antialiased">
         {/* Sans JavaScript, on neutralise les états de départ des animations
             d'entrée : le contenu s'affiche immédiatement au lieu de rester
             invisible. */}
