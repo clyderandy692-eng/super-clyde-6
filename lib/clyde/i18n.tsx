@@ -193,7 +193,7 @@ const FR = {
   },
 
   /* La couche narrative du monde CLYDE : une section dédiée, pas une voix
-     diffusée partout. Le mouvement central est la rév���lation — flou vers
+     diffusée partout. Le mouvement central est la rév����lation — flou vers
      net, invisible vers vu. Le reste de la page garde son ton direct. */
   revelation: {
     kicker: 'La Révélation',
@@ -1279,6 +1279,25 @@ const FR = {
       bookingsDetail: 'Créneaux et demandes reçues',
       qrDetail: 'Imprimez vos QR codes',
       analyticsDetail: 'Ce qui attire et ce qui bloque',
+      activation: {
+        title: 'Vos premiers pas',
+        subtitle: 'Quatre étapes pour que votre page commence à vendre.',
+        step1Title: 'Ajoutez au moins 3 articles',
+        step1Done: (n: number) => `${n} article${n > 1 ? 's' : ''} ajouté${n > 1 ? 's' : ''}`,
+        step1Action: 'Ajouter des articles',
+        step2Title: 'Publiez votre page',
+        step2Done: 'Page publiée',
+        step2Action: 'Publier',
+        step3Title: 'Téléchargez votre QR code',
+        step3Done: 'QR code téléchargé',
+        step3Action: 'Voir mes papiers',
+        step4Title: 'Partagez votre lien',
+        step4Done: 'Lien partagé',
+        step4Action: 'Voir ma page',
+        markDone: 'Marquer comme fait',
+        undo: 'Annuler',
+        allDone: 'Vos premiers pas sont terminés — votre page est prête à vendre.',
+      },
     },
     orders: {
       title: 'Commandes',
@@ -2866,6 +2885,25 @@ const EN: Dict = {
       bookingsDetail: 'Slots and incoming requests',
       qrDetail: 'Print your QR codes',
       analyticsDetail: 'What draws people in, and what stalls',
+      activation: {
+        title: 'Your first steps',
+        subtitle: 'Four steps before your page can start selling.',
+        step1Title: 'Add at least 3 items',
+        step1Done: (n: number) => `${n} item${n > 1 ? 's' : ''} added`,
+        step1Action: 'Add items',
+        step2Title: 'Publish your page',
+        step2Done: 'Page published',
+        step2Action: 'Publish',
+        step3Title: 'Download your QR code',
+        step3Done: 'QR code downloaded',
+        step3Action: 'View my papers',
+        step4Title: 'Share your link',
+        step4Done: 'Link shared',
+        step4Action: 'View my page',
+        markDone: 'Mark as done',
+        undo: 'Undo',
+        allDone: 'Your first steps are done — your page is ready to sell.',
+      },
     },
     orders: {
       title: 'Orders',

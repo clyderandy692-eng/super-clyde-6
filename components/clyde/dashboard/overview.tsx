@@ -8,6 +8,8 @@ import {
   ArrowUpRight,
   BadgeCheck,
   CalendarClock,
+  Check,
+  Circle,
   Eye,
   Globe,
   ScrollText,
@@ -16,6 +18,7 @@ import {
   Wallet,
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
+import { cn } from '@/lib/utils'
 import { useLocale, useT } from '@/lib/clyde/i18n'
 import { useClyde } from '@/lib/clyde/store'
 import { formatPrice } from '@/lib/clyde/taxonomy'
@@ -54,6 +57,8 @@ export function DashboardOverview() {
   const allProducts = useClyde((s) => s.products)
   const publishPage = useClyde((s) => s.publishPage)
   const setOrderStatus = useClyde((s) => s.setOrderStatus)
+  const activationChecks = useClyde((s) => s.activationChecks)
+  const toggleActivationCheck = useClyde((s) => s.toggleActivationCheck)
   /* Un booléen plutôt que la liste : le panneau n'a besoin que de savoir s'il
      y a matière à ouvrir, et sélectionner un tableau recalculerait le rendu à
      chaque écriture du registre. */
@@ -107,6 +112,22 @@ export function DashboardOverview() {
             {t.dashboard.common.viewPage}
           </Button>
         }
+      />
+
+      {/* Checklist d'activation : le premier compte qui arrive voit 4 KPI à
+          zéro et aucune action guidée. Les deux premières étapes se lisent
+          dans des données réelles (nombre d'articles, page publiée) — rien
+          n'y est déclaré à la main. Les deux dernières demandent une
+          confirmation explicite du commerçant, faute d'un signal automatique
+          fiable pour « QR imprimé » ou « lien partagé ». La checklist
+          disparaît une fois les quatre étapes acquises : elle n'a rien à dire
+          à un commerçant déjà installé. */}
+      <ActivationChecklist
+        business={business}
+        page={page}
+        productCount={products.length}
+        activationChecks={activationChecks}
+        onToggle={toggleActivationCheck}
       />
 
       {/* La publication est l'action la plus importante : elle passe avant les
@@ -316,7 +337,7 @@ export function DashboardOverview() {
           le panneau s'ouvre donc aussi pour la montrer, sinon la page de cours
           annoncerait un certificat « dans votre tableau de bord » introuvable. */}
       {(page?.published || hasFormationCertificate) && (
-        <section className="mt-8">
+        <section id="papiers-ingenieur" className="mt-8">
           <EngineerPapers business={business} />
         </section>
       )}
@@ -432,5 +453,187 @@ function ShortcutCard({
         aria-hidden="true"
       />
     </Link>
+  )
+}
+
+/**
+ * Checklist des quatre premières actions qui font vivre une page CLYDE.
+ *
+ * Les deux premières étapes sont dérivées de données réelles — aucun état
+ * séparé à faire dériver, donc aucun risque de désynchronisation. Les deux
+ * dernières demandent une confirmation du commerçant : aucun signal fiable
+ * n'existe aujourd'hui pour détecter un téléchargement de fichier ou un
+ * partage WhatsApp effectué hors de l'application.
+ */
+function ActivationChecklist({
+  business,
+  page,
+  productCount,
+  activationChecks,
+  onToggle,
+}: {
+  business: { id: string; slug: string }
+  page: { published: boolean } | undefined
+  productCount: number
+  activationChecks: string[]
+  onToggle: (businessId: string, step: string) => void
+}) {
+  const t = useT()
+  const ac = t.dashboard.overview.activation
+
+  const step1Done = productCount >= 3
+  const step2Done = Boolean(page?.published)
+  const step3Key = 'qr_downloaded'
+  const step4Key = 'link_shared'
+  const step3Done = activationChecks.includes(`${business.id}:${step3Key}`)
+  const step4Done = activationChecks.includes(`${business.id}:${step4Key}`)
+  const allDone = step1Done && step2Done && step3Done && step4Done
+
+  /* Une fois les quatre étapes acquises, la checklist n'a plus rien à
+     annoncer à un commerçant déjà installé : elle disparaît plutôt que de
+     rester affichée, satisfaite, indéfiniment. */
+  if (allDone) return null
+
+  const steps: {
+    key: string
+    done: boolean
+    title: string
+    detail: string | null
+    action: { label: string; href?: string; onClick?: () => void }
+  }[] = [
+    {
+      key: 'items',
+      done: step1Done,
+      title: ac.step1Title,
+      detail: productCount > 0 ? ac.step1Done(productCount) : null,
+      action: { label: ac.step1Action, href: '/tableau-de-bord/catalogue' },
+    },
+    {
+      key: 'publish',
+      done: step2Done,
+      title: ac.step2Title,
+      detail: step2Done ? ac.step2Done : null,
+      /* Le bouton « Publier ma page » se trouve juste en dessous : pas
+         d'action distincte ici, un lien suffit à situer l'étape. */
+      action: { label: ac.step2Action, href: '#' },
+    },
+    {
+      key: 'qr',
+      done: step3Done,
+      title: ac.step3Title,
+      detail: step3Done ? ac.step3Done : null,
+      action: step3Done
+        ? { label: ac.undo, onClick: () => onToggle(business.id, step3Key) }
+        : { label: ac.step3Action, href: '#papiers-ingenieur' },
+    },
+    {
+      key: 'share',
+      done: step4Done,
+      title: ac.step4Title,
+      detail: step4Done ? ac.step4Done : null,
+      action: step4Done
+        ? { label: ac.undo, onClick: () => onToggle(business.id, step4Key) }
+        : { label: ac.step4Action, href: `/r/${business.slug}` },
+    },
+  ]
+
+  return (
+    <section className="mb-6 rounded-2xl border border-border bg-background p-5">
+      <h2 className="text-sm font-semibold">{ac.title}</h2>
+      <p className="mt-1 text-sm text-muted-foreground">{ac.subtitle}</p>
+      <ul className="mt-4 flex flex-col gap-2.5">
+        {steps.map((step) => (
+          <li
+            key={step.key}
+            className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-border px-4 py-3"
+          >
+            <div className="flex items-start gap-3">
+              {step.done ? (
+                <span
+                  className="mt-0.5 grid size-5 shrink-0 place-items-center rounded-full bg-brand text-brand-foreground"
+                  aria-hidden="true"
+                >
+                  <Check className="size-3.5" />
+                </span>
+              ) : (
+                <Circle
+                  className="mt-0.5 size-5 shrink-0 text-muted-foreground"
+                  aria-hidden="true"
+                />
+              )}
+              <div>
+                <p
+                  className={cn(
+                    'text-sm font-medium',
+                    step.done && 'text-muted-foreground line-through',
+                  )}
+                >
+                  {step.title}
+                </p>
+                {step.detail && (
+                  <p className="mt-0.5 text-xs text-muted-foreground">
+                    {step.detail}
+                  </p>
+                )}
+              </div>
+            </div>
+            {step.key === 'qr' || step.key === 'share' ? (
+              step.done ? (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={step.action.onClick}
+                >
+                  {step.action.label}
+                </Button>
+              ) : (
+                <div className="flex items-center gap-2">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    nativeButton={false}
+                    render={
+                      <Link
+                        href={step.action.href!}
+                        target={step.key === 'share' ? '_blank' : undefined}
+                      />
+                    }
+                  >
+                    {step.action.label}
+                  </Button>
+                  <Button
+                    size="sm"
+                    onClick={() =>
+                      onToggle(
+                        business.id,
+                        step.key === 'qr' ? step3Key : step4Key,
+                      )
+                    }
+                  >
+                    {ac.markDone}
+                  </Button>
+                </div>
+              )
+            ) : !step.done && step.action.href !== '#' ? (
+              <Button
+                variant="outline"
+                size="sm"
+                nativeButton={false}
+                render={<Link href={step.action.href!} />}
+              >
+                {step.action.label}
+              </Button>
+            ) : !step.done ? (
+              /* Étape « publier » : le bouton d'action se trouve juste en
+                 dessous, dans la bannière de brouillon — en dupliquer un ici
+                 aurait proposé deux boutons pour le même geste. */
+              <span className="text-xs text-muted-foreground">
+                {t.dashboard.overview.draftTitle}
+              </span>
+            ) : null}
+          </li>
+        ))}
+      </ul>
+    </section>
   )
 }

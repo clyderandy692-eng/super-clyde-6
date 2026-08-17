@@ -5,6 +5,7 @@ import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
 import { createTemplate, DEFAULT_THEME } from './blocks'
 import { normalizePhone } from './whatsapp'
+import { dayKey } from './metrics'
 import {
   DEMO_ABANDONED_CARTS,
   DEMO_ACTIVE_BUSINESS_ID,
@@ -128,6 +129,17 @@ interface ClydeState {
   teamMembers: TeamMember[]
   adminMessages: AdminMessage[]
   goodieRedemptions: GoodieRedemption[]
+  /**
+   * Étapes de la checklist d'activation confirmées par le commerçant.
+   *
+   * Clé composite `businessId:step`, et non un booléen par étape sur
+   * `Business` : la checklist ne concerne que les tout premiers pas et n'a
+   * aucune raison de vivre dans le compte lui-même. Les deux premières
+   * étapes (articles ajoutés, page publiée) ne sont PAS ici — elles se lisent
+   * directement dans les données réelles (`products`, `page.published`) et
+   * n'ont donc rien à confirmer manuellement.
+   */
+  activationChecks: string[]
 
   /* --- Business --- */
   /**
@@ -249,6 +261,10 @@ interface ClydeState {
     type: EventType,
     targetId?: string | null,
   ) => void
+
+  /* --- Activation --- */
+  /** Coche ou décoche une étape de la checklist d'activation. */
+  toggleActivationCheck: (businessId: string, step: string) => void
 
   /* --- Abonnement CLYDE --- */
   /** Le plan appartient au compte : c'est l'identifiant du propriétaire. */
@@ -522,6 +538,7 @@ export const useClyde = create<ClydeState>()(
   teamMembers: [],
   adminMessages: [],
   goodieRedemptions: [],
+  activationChecks: [],
 
   createBusiness: (input) => {
     /* Le quota se vérifie AVANT toute écriture : une page créée puis annulée
@@ -825,10 +842,48 @@ export const useClyde = create<ClydeState>()(
         options_summary: optionsSummary(product, line.optionIds) || null,
       }
     })
-    set((s) => ({
-      orders: [order, ...s.orders],
-      orderItems: [...s.orderItems, ...items],
-    }))
+    set((s) => {
+      /* Même registre que les vues de produit : une commande réelle doit
+         faire bouger les mêmes statistiques consolidées que celles lues par
+         « meilleures ventes », le tunnel de conversion et le chiffre estimé
+         de la page analytics — sinon un commerçant qui vend vraiment verrait
+         ses ventes réelles nulle part dans ses propres chiffres. */
+      const today = dayKey(new Date())
+      let productStats = s.productStats
+      for (const line of input.lines) {
+        const existing = productStats.find(
+          (row) =>
+            row.product_id === line.productId &&
+            dayKey(new Date(row.day)) === today,
+        )
+        productStats = existing
+          ? productStats.map((row) =>
+              row.id === existing.id
+                ? {
+                    ...row,
+                    orders: row.orders + line.quantity,
+                    carts: row.carts + line.quantity,
+                  }
+                : row,
+            )
+          : [
+              ...productStats,
+              {
+                id: uid('ps'),
+                product_id: line.productId,
+                day: new Date().toISOString(),
+                views: 0,
+                carts: line.quantity,
+                orders: line.quantity,
+              },
+            ]
+      }
+      return {
+        orders: [order, ...s.orders],
+        orderItems: [...s.orderItems, ...items],
+        productStats,
+      }
+    })
     get().track(input.businessId, 'order_created', id)
     return id
   },
@@ -1083,19 +1138,61 @@ export const useClyde = create<ClydeState>()(
     })),
 
   track: (businessId, type, targetId = null) =>
-    set((s) => ({
-      events: [
-        ...s.events,
-        {
-          id: uid('ev'),
-          business_id: businessId,
-          event_type: type,
-          target_id: targetId,
-          session_id: 'demo-session',
-          created_at: new Date().toISOString(),
-        },
-      ],
-    })),
+    set((s) => {
+      const event: AnalyticsEvent = {
+        id: uid('ev'),
+        business_id: businessId,
+        event_type: type,
+        target_id: targetId,
+        session_id: 'demo-session',
+        created_at: new Date().toISOString(),
+      }
+
+      /* Une vue de produit alimente aussi les statistiques consolidées, et
+         pas seulement le registre d'événements : `productStats` est ce que
+         lisent le tableau de bord ET la page « Ce que le Miroir vous révèle »
+         (KPI de vues, courbe, meilleures ventes, produits les plus regardés).
+         Avant cette ligne, ce registre ne recevait AUCUNE écriture depuis sa
+         création — chaque commerce affichait pour toujours les mêmes chiffres
+         de démonstration, qu'un client réel ait visité la page ou non. */
+      if (type !== 'product_view' || !targetId) {
+        return { events: [...s.events, event] }
+      }
+
+      const today = dayKey(new Date())
+      const existing = s.productStats.find(
+        (row) =>
+          row.product_id === targetId && dayKey(new Date(row.day)) === today,
+      )
+      const productStats = existing
+        ? s.productStats.map((row) =>
+            row.id === existing.id ? { ...row, views: row.views + 1 } : row,
+          )
+        : [
+            ...s.productStats,
+            {
+              id: uid('ps'),
+              product_id: targetId,
+              day: new Date().toISOString(),
+              views: 1,
+              carts: 0,
+              orders: 0,
+            },
+          ]
+
+      return { events: [...s.events, event], productStats }
+    }),
+
+  toggleActivationCheck: (businessId, step) =>
+    set((s) => {
+      const key = `${businessId}:${step}`
+      const done = s.activationChecks.includes(key)
+      return {
+        activationChecks: done
+          ? s.activationChecks.filter((k) => k !== key)
+          : [...s.activationChecks, key],
+      }
+    }),
 
   setPlan: (ownerId, plan) =>
     set((s) => {
@@ -1888,6 +1985,16 @@ export const useClyde = create<ClydeState>()(
         teamMembers: s.teamMembers,
         adminMessages: s.adminMessages,
         goodieRedemptions: s.goodieRedemptions,
+        /* Les vues et ventes consolidées ne sont plus de simples graines de
+           démonstration depuis que `track()` et `createOrder` y écrivent
+           réellement : sans cette ligne, chaque commande passée et chaque
+           fiche produit consultée disparaissait au rechargement suivant, et
+           « ce que le Miroir révèle » n'aurait jamais pu progresser au-delà
+           de la session en cours. */
+        productStats: s.productStats,
+        /* Aucune graine : cocher « QR téléchargé » est un acte du commerçant,
+           pas un contenu de démonstration à recompléter. */
+        activationChecks: s.activationChecks,
       }),
       /**
        * Fusion à la réhydratation.
@@ -1932,6 +2039,12 @@ export const useClyde = create<ClydeState>()(
           trialBonuses: mergeById(saved.trialBonuses, current.trialBonuses),
           referrals: mergeById(saved.referrals, current.referrals),
       certificates: mergeById(saved.certificates, current.certificates),
+      /* `mergeById` : les lignes réellement écrites par `track()` et
+         `createOrder` s'ajoutent à celles de démonstration au lieu de les
+         remplacer — un commerce de démonstration garde ses chiffres
+         d'exemple, un commerce réel garde sa progression réelle. */
+      productStats: mergeById(saved.productStats, current.productStats),
+      activationChecks: saved.activationChecks ?? current.activationChecks,
       /* La progression n'a aucune graine : ce que le visiteur a validé est la
          seule vérité, et `mergeById` la conserverait à l'identique. */
       lessonCompletions: saved.lessonCompletions ?? current.lessonCompletions,
