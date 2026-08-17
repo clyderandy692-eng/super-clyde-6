@@ -25,6 +25,9 @@ import {
   CalendarClock,
   GalleryHorizontal,
   BadgePercent,
+  Undo2,
+  Redo2,
+  Circle,
 } from 'lucide-react'
 import {
   DndContext,
@@ -212,6 +215,10 @@ const LABELS = {
     email: 'Email',
     descriptionField: 'Description',
     publicPage: 'Ouvrir ma page',
+  undo: 'Annuler',
+  redo: 'Rétablir',
+  readiness: 'Votre page est prête à',
+  readinessDone: 'Votre page est complète.',
     empty: 'Ajoutez un bloc pour commencer.',
     demoTitle: 'Explorer le constructeur de page',
     demoDescription: 'Connectez-vous en mode démo pour inspecter les blocs, les réglages et la preview live.',
@@ -318,6 +325,10 @@ const LABELS = {
     email: 'Email',
     descriptionField: 'Description',
     publicPage: 'Open my page',
+  undo: 'Undo',
+  redo: 'Redo',
+  readiness: 'Your page is',
+  readinessDone: 'Your page is complete.',
     empty: 'Add a block to get started.',
     demoTitle: 'Explore the Page Builder',
     demoDescription: 'Use demo mode to inspect blocks, settings, and the live preview before connecting your account.',
@@ -376,6 +387,13 @@ export function PageEditor() {
   /* Dans le tiroir Structure (mobile), les réglages du bloc s'ouvrent en
      accordéon SOUS le bloc touché : pas d'aller-retour entre deux tiroirs. */
   const [expandedId, setExpandedId] = useState<string | null>(null)
+  /* Historique d'annulation. Deux piles d'états de mise en page : `commit()`
+     étant l'entonnoir unique de TOUTE modification (ajout, suppression,
+     réglage, réordonnancement), il suffit d'y empiler l'état précédent pour
+     que chaque geste devienne réversible. Plafonné à 50 pas : au-delà,
+     personne ne remonte, et la mémoire n'a pas à grandir sans fin. */
+  const [past, setPast] = useState<Block[][]>([])
+  const [future, setFuture] = useState<Block[][]>([])
 
   /* Glisser-déposer de la liste de blocs : la souris exige 6 px de mouvement
      avant de saisir (un clic reste un clic), le doigt 200 ms d'appui (un
@@ -409,6 +427,24 @@ export function PageEditor() {
     setPreviewDevice(media.matches ? 'mobile' : 'desktop')
   }, [])
 
+  /* Raccourcis d'annulation. Ignorés pendant une saisie : dans un champ de
+     texte, Ctrl+Z doit annuler les caractères tapés, pas la mise en page.
+     Les fonctions `undo`/`redo` sont des déclarations hoistées du corps du
+     composant, donc résolues à l'exécution de l'écouteur. */
+  useEffect(() => {
+    function onKey(event: KeyboardEvent) {
+      if (!(event.metaKey || event.ctrlKey) || event.key.toLowerCase() !== 'z') return
+      const target = event.target as HTMLElement | null
+      const tag = target?.tagName
+      if (tag === 'INPUT' || tag === 'TEXTAREA' || target?.isContentEditable) return
+      event.preventDefault()
+      if (event.shiftKey) redo()
+      else undo()
+    }
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  })
+
 
   const blocks = page?.layout_json ?? []
   const selected = blocks.find((block) => block.id === selectedId) ?? null
@@ -421,8 +457,41 @@ export function PageEditor() {
 
 
   function commit(next: Block[]) {
+    /* L'état AVANT modification part sur la pile d'annulation, et la pile de
+       rétablissement se vide : une nouvelle branche efface l'ancien futur,
+       comme dans tout éditeur. */
+    setPast((stack) => [...stack.slice(-49), blocks])
+    setFuture([])
     updateLayout(business!.id, next)
     setPreviewKey((key) => key + 1)
+  }
+
+  /* Restaure un état sans l'empiler à son tour : on déplace entre les deux
+     piles au lieu de passer par `commit()`, qui écraserait l'historique. */
+  function restore(next: Block[]) {
+    updateLayout(business!.id, next)
+    setPreviewKey((key) => key + 1)
+    /* Le bloc sélectionné peut ne plus exister dans l'état restauré (annulation
+       d'un ajout) : la sélection retombe alors sur le style global. */
+    setSelectedId((current) =>
+      current && next.some((block) => block.id === current) ? current : null,
+    )
+  }
+
+  function undo() {
+    if (past.length === 0) return
+    const previous = past[past.length - 1]
+    setPast((stack) => stack.slice(0, -1))
+    setFuture((stack) => [blocks, ...stack])
+    restore(previous)
+  }
+
+  function redo() {
+    if (future.length === 0) return
+    const [next, ...rest] = future
+    setFuture(rest)
+    setPast((stack) => [...stack, blocks])
+    restore(next)
   }
 
   function patchSelected(patch: Partial<Block>) {
@@ -467,6 +536,37 @@ export function PageEditor() {
     commit(next)
     setSelectedId(next[0]?.id ?? null)
   }
+
+  /* Garde-fou de qualité : ce qui manque pour qu'une vitrine soit vendeuse.
+     Rien n'est bloqué — on montre. Un commerçant qui publie sans photo ni
+     numéro n'a pas fait un choix, il a oublié une étape. Les critères sont
+     ceux qui décident d'une commande : voir, comprendre le prix, contacter. */
+  const mine = products.filter((p) => p.business_id === business.id && p.active)
+  const checks = [
+    { done: mine.length >= 3, label: locale === 'fr' ? '3 articles au catalogue' : '3 items in the catalogue' },
+    {
+      done: mine.length > 0 && mine.filter((p) => p.media_urls.length > 0).length >= Math.min(3, mine.length),
+      label: locale === 'fr' ? 'Une photo par article' : 'A photo on each item',
+    },
+    {
+      done: mine.some((p) => p.price > 0),
+      label: locale === 'fr' ? 'Des prix renseignés' : 'Prices filled in',
+    },
+    {
+      done: Boolean(business.whatsapp_number?.trim()),
+      label: locale === 'fr' ? 'Un numéro WhatsApp' : 'A WhatsApp number',
+    },
+    {
+      done: blocks.some((b) => b.type === 'catalogue' && !b.hidden),
+      label: locale === 'fr' ? 'Le catalogue affiché' : 'The catalogue shown',
+    },
+    {
+      done: blocks.some((b) => b.type === 'contact' && !b.hidden),
+      label: locale === 'fr' ? 'Un moyen de vous joindre' : 'A way to reach you',
+    },
+  ]
+  const doneCount = checks.filter((c) => c.done).length
+  const readiness = Math.round((doneCount / checks.length) * 100)
 
   /* Panneaux partagés entre les cartes desktop et les tiroirs mobiles : une
      seule source de vérité pour la liste des blocs et l'inspecteur, deux
@@ -648,19 +748,79 @@ export function PageEditor() {
             divergent. */}
         <div className="flex items-center justify-between gap-3">
           <h1 className="text-2xl font-semibold tracking-tight md:text-3xl">{copy.title}</h1>
-          <Button
-            variant="outline"
-            className="shrink-0"
-            onClick={() => window.open(`/r/${business.slug}`, '_blank', 'noopener,noreferrer')}
-          >
-            <Eye data-icon="inline-start" />
-            {/* Sous 640 px le libellé disputerait sa place au titre : l'icône
-                seule suffit, le nom restant lisible par les lecteurs d'écran. */}
-            <span className="hidden sm:inline">{copy.publicPage}</span>
-            <span className="sr-only sm:hidden">{copy.publicPage}</span>
-          </Button>
+          <div className="flex shrink-0 items-center gap-2">
+            {/* Annuler / Rétablir. Un builder sans marche arrière rend chaque
+                suppression définitive : c'est le défaut le plus cité en test
+                utilisateur. Désactivés quand la pile est vide, pour que l'état
+                de l'historique soit lisible sans cliquer. */}
+            <div className="flex items-center rounded-lg border border-border">
+              <button
+                type="button"
+                onClick={undo}
+                disabled={past.length === 0}
+                aria-label={copy.undo}
+                title={`${copy.undo} (Ctrl+Z)`}
+                className="flex size-9 items-center justify-center rounded-l-lg text-muted-foreground transition-colors hover:bg-muted hover:text-foreground disabled:pointer-events-none disabled:opacity-40"
+              >
+                <Undo2 className="size-4" aria-hidden="true" />
+              </button>
+              <button
+                type="button"
+                onClick={redo}
+                disabled={future.length === 0}
+                aria-label={copy.redo}
+                title={`${copy.redo} (Ctrl+Shift+Z)`}
+                className="flex size-9 items-center justify-center rounded-r-lg border-l border-border text-muted-foreground transition-colors hover:bg-muted hover:text-foreground disabled:pointer-events-none disabled:opacity-40"
+              >
+                <Redo2 className="size-4" aria-hidden="true" />
+              </button>
+            </div>
+            <Button
+              variant="outline"
+              onClick={() => window.open(`/r/${business.slug}`, '_blank', 'noopener,noreferrer')}
+            >
+              <Eye data-icon="inline-start" />
+              {/* Sous 640 px le libellé disputerait sa place au titre : l'icône
+                  seule suffit, le nom restant lisible par les lecteurs d'écran. */}
+              <span className="hidden sm:inline">{copy.publicPage}</span>
+              <span className="sr-only sm:hidden">{copy.publicPage}</span>
+            </Button>
+          </div>
         </div>
         <p className="text-sm text-muted-foreground">{copy.description}</p>
+
+        {/* Score de complétion : une jauge et les deux manques les plus
+            proches. Complet, le bandeau disparaît — un indicateur toujours
+            présent finit par ne plus rien signaler. */}
+        {readiness < 100 && (
+          <div className="flex flex-col gap-2 rounded-xl border border-border bg-muted/40 px-3.5 py-3 sm:flex-row sm:items-center sm:gap-4">
+            <div className="flex min-w-0 flex-1 flex-col gap-1.5">
+              <p className="text-sm font-medium">
+                {copy.readiness} <span className="font-semibold">{readiness}%</span>
+              </p>
+              <div
+                className="h-1.5 w-full overflow-hidden rounded-full bg-border"
+                role="progressbar"
+                aria-valuenow={readiness}
+                aria-valuemin={0}
+                aria-valuemax={100}
+              >
+                <div className="h-full rounded-full bg-primary transition-all" style={{ width: `${readiness}%` }} />
+              </div>
+            </div>
+            <ul className="flex flex-wrap gap-x-3 gap-y-1">
+              {checks
+                .filter((c) => !c.done)
+                .slice(0, 3)
+                .map((c) => (
+                  <li key={c.label} className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                    <Circle className="size-3 shrink-0" aria-hidden="true" />
+                    {c.label}
+                  </li>
+                ))}
+            </ul>
+          </div>
+        )}
       </header>
 
       {/* `2xl:` (1536px) plutôt que `min-[1600px]:` : les deux variantes ont la
@@ -674,7 +834,7 @@ export function PageEditor() {
           défiler l'aperçu et la liste de blocs À L'INTÉRIEUR de leur carte.
           Avec une simple min-height, l'aperçu grandissait à la taille de son
           contenu (page entière) et rien ne défilait en interne. */}
-      <div className="grid min-h-[calc(100dvh-150px)] min-w-0 gap-5 lg:h-[calc(100dvh-150px)] lg:grid-cols-[300px_minmax(0,1fr)] 2xl:grid-cols-[300px_minmax(0,1fr)_320px]">
+      <div className="grid min-h-[calc(100dvh-150px)] min-w-0 gap-5 lg:h-[calc(100dvh-150px)] lg:grid-cols-[300px_minmax(0,1fr)] xl:grid-cols-[300px_minmax(0,1fr)_320px]">
         {/* Structure : carte visible sur grand écran seulement — sur téléphone
             elle vit dans le tiroir bas. */}
         <Card className="hidden min-h-0 min-w-0 flex-col overflow-hidden lg:flex">
@@ -755,6 +915,37 @@ export function PageEditor() {
                      et cartes répondent comme sur la page publique, pour que le
                      commerçant teste sa page sans quitter l'éditeur. */
                   interactive
+                  /* Sélection au clic DANS l'aperçu — le geste naturel, celui
+                     de Framer ou Webflow. La liste latérale restait le seul
+                     moyen de désigner une section, alors que le commerçant
+                     pointe naturellement ce qu'il voit.
+
+                     Pas de `stopPropagation` : le clic sélectionne ET traverse
+                     jusqu'au bouton visé, pour que l'aperçu reste jouable. */
+                  wrapBlock={(block, node) => (
+                    <div
+                      onClick={() => {
+                        setSelectedId(block.id)
+                        /* Sous 1280px les réglages vivent dans un tiroir :
+                           sélectionner sans l'ouvrir ne montrerait rien. */
+                        if (window.innerWidth < 1280) setMobilePanel('settings')
+                      }}
+                      className={`group/blk relative cursor-pointer ${
+                        selectedId === block.id
+                          ? 'outline-2 -outline-offset-2 outline-primary'
+                          : 'hover:outline-2 hover:-outline-offset-2 hover:outline-primary/40'
+                      }`}
+                    >
+                      {node}
+                      <span
+                        className={`pointer-events-none absolute top-1 left-1 z-30 rounded-md bg-primary px-1.5 py-0.5 text-[10px] font-semibold text-primary-foreground transition-opacity ${
+                          selectedId === block.id ? 'opacity-100' : 'opacity-0 group-hover/blk:opacity-100'
+                        }`}
+                      >
+                        {BLOCK_META[block.type]?.label ?? block.type}
+                      </span>
+                    </div>
+                  )}
                 />
               </div>
             </div>
@@ -769,7 +960,7 @@ export function PageEditor() {
             l'aperçu, dans une colonne de 260px — à plus de 1000px de haut. En
             dessous de `2xl:`, on garde le tiroir bas, qui présente les mêmes
             réglages sur toute la largeur. */}
-        <Card className="hidden min-h-0 min-w-0 overflow-hidden 2xl:block">
+        <Card className="hidden min-h-0 min-w-0 overflow-hidden xl:block">
           <CardHeader className="flex flex-row items-start justify-between gap-3 border-b">
             <div>
               {/* Sans bloc sélectionné, le panneau montre le style GLOBAL :
@@ -807,7 +998,7 @@ export function PageEditor() {
       {/* `right-24` et non `right-6` : le lecteur de musique flottant occupe
           déjà le coin bas-droit (`sm:right-6`, z-60) — les deux se
           chevauchaient. Le bouton se décale à sa gauche. */}
-      <div className="fixed right-24 bottom-6 z-40 hidden items-center rounded-2xl border border-border bg-background/95 p-1.5 shadow-[0_16px_40px_-18px_rgba(0,0,0,0.5)] backdrop-blur-xl lg:flex 2xl:hidden">
+      <div className="fixed right-24 bottom-6 z-40 hidden items-center rounded-2xl border border-border bg-background/95 p-1.5 shadow-[0_16px_40px_-18px_rgba(0,0,0,0.5)] backdrop-blur-xl lg:flex xl:hidden">
         <button
           type="button"
           onClick={() => setMobilePanel('settings')}
@@ -823,7 +1014,7 @@ export function PageEditor() {
         {/* Même seuil que la barre qui l'ouvre : en `lg:hidden`, le tiroir était
             masqué alors que son bouton restait cliquable — un tap n'ouvrait rien
             entre 1024 et 1600px. */}
-        <SheetContent side="bottom" className="max-h-[78dvh] gap-0 rounded-t-2xl p-0 2xl:hidden">
+        <SheetContent side="bottom" className="max-h-[78dvh] gap-0 rounded-t-2xl p-0 xl:hidden">
           {/* pr-12 : la croix de fermeture du Sheet occupe le coin droit. */}
           <SheetHeader className="flex-row items-center justify-between border-b py-3 pr-12 pl-4">
             <SheetTitle className="text-base">{copy.structure} · {blocks.length}</SheetTitle>
@@ -838,7 +1029,7 @@ export function PageEditor() {
 
       {/* Tiroir Réglages. */}
       <Sheet open={mobilePanel === 'settings'} onOpenChange={(open) => setMobilePanel(open ? 'settings' : null)}>
-        <SheetContent side="bottom" className="max-h-[78dvh] gap-0 rounded-t-2xl p-0 2xl:hidden">
+        <SheetContent side="bottom" className="max-h-[78dvh] gap-0 rounded-t-2xl p-0 xl:hidden">
           <SheetHeader className="flex-row items-center justify-between border-b py-3 pr-12 pl-4">
             <SheetTitle className="text-base">
               {selected ? copy.settings : copy.pageStyle}
