@@ -418,7 +418,11 @@ interface ClydeState {
     businessId: string
     goodieId: string
     cost: number
+    recipientName: string
+    recipientPhone: string
     deliveryCity: string
+    deliveryAddress: string | null
+    size: string | null
     deliveryNote: string | null
   }) => string | null
 
@@ -1573,31 +1577,51 @@ export const useClyde = create<ClydeState>()(
     }))
   },
 
-  redeemGoodie: ({ businessId, goodieId, cost, deliveryCity, deliveryNote }) => {
-    const s = get()
-    /* Le solde est recalculé ici, à l'instant de la dépense, et non lu depuis
-       une valeur passée par l'écran : entre l'affichage et le clic, le
-       commerçant a pu échanger un autre goodie dans un second onglet. */
-    const { balance } = pointsBalance({
-      businessId,
-      lessonCompletions: s.lessonCompletions,
-      certificates: s.certificates,
-      referrals: s.referrals,
-      redemptions: s.goodieRedemptions,
-    })
-    if (balance < cost) return null
+      redeemGoodie: ({
+        businessId,
+        goodieId,
+        cost,
+        recipientName,
+        recipientPhone,
+        deliveryCity,
+        deliveryAddress,
+        size,
+        deliveryNote,
+      }) => {
+        const s = get()
+        /* Sans destinataire joignable, le colis est indéliverable : le contrôle
+           vit ici et non dans l'écran, comme celui du solde — un formulaire
+           contourné ne doit pas pouvoir écrire une livraison impossible. */
+        if (!recipientName.trim() || !recipientPhone.trim() || !deliveryCity.trim()) {
+          return null
+        }
+        /* Le solde est recalculé ici, à l'instant de la dépense, et non lu depuis
+           une valeur passée par l'écran : entre l'affichage et le clic, le
+           commerçant a pu échanger un autre goodie dans un second onglet. */
+        const { balance } = pointsBalance({
+          businessId,
+          lessonCompletions: s.lessonCompletions,
+          certificates: s.certificates,
+          referrals: s.referrals,
+          redemptions: s.goodieRedemptions,
+        })
+        if (balance < cost) return null
 
-    const id = uid('goodie')
-    const redemption: GoodieRedemption = {
-      id,
-      business_id: businessId,
-      goodie_id: goodieId,
-      points_spent: cost,
-      delivery_city: deliveryCity,
-      delivery_note: deliveryNote?.trim() || null,
-      status: 'demande',
-      created_at: new Date().toISOString(),
-    }
+        const id = uid('goodie')
+        const redemption: GoodieRedemption = {
+          id,
+          business_id: businessId,
+          goodie_id: goodieId,
+          points_spent: cost,
+          recipient_name: recipientName.trim(),
+          recipient_phone: recipientPhone.trim(),
+          delivery_city: deliveryCity.trim(),
+          delivery_address: deliveryAddress?.trim() || null,
+          size: size?.trim() || null,
+          delivery_note: deliveryNote?.trim() || null,
+          status: 'demande',
+          created_at: new Date().toISOString(),
+        }
     set((st) => ({ goodieRedemptions: [...st.goodieRedemptions, redemption] }))
     return id
   },
@@ -1661,8 +1685,12 @@ export const useClyde = create<ClydeState>()(
          ce qui rétablit du même coup les options du plat signature. Sans
          rupture, un visiteur déjà venu verrait une carte sans aucun choix.
          v7 : avis clients. Nouveaux registres, absents des sessions v6 ; la
-         rupture leur donne les avis de démonstration plutôt qu'un bloc vide. */
-      version: 7,
+         rupture leur donne les avis de démonstration plutôt qu'un bloc vide.
+         v8 : l'échange de goodie devient un bon de livraison complet
+         (destinataire, téléphone, adresse, taille). Les échanges écrits en v7
+         sont complétés champ à champ plutôt que jetés : les points dépensés
+         sont l'acte du visiteur. */
+      version: 8,
       /* Les formes n'ont pas bougé, seules des valeurs de démonstration ont été
          corrigées. On repart donc des graines, en conservant ce que le visiteur
          a lui-même produit : ses comptes et ses abonnements. */
@@ -1710,7 +1738,16 @@ export const useClyde = create<ClydeState>()(
              vider à chaque montée de version perdrait des contacts. */
           teamMembers: old?.teamMembers ?? [],
           adminMessages: old?.adminMessages ?? [],
-          goodieRedemptions: old?.goodieRedemptions ?? [],
+          /* Les échanges v7 n'avaient ni destinataire ni taille : on complète
+             champ à champ avec des valeurs vides plutôt que de jeter la ligne —
+             les points ont réellement été dépensés. */
+          goodieRedemptions: (old?.goodieRedemptions ?? []).map((r) => ({
+            ...r,
+            recipient_name: r.recipient_name ?? '',
+            recipient_phone: r.recipient_phone ?? '',
+            delivery_address: r.delivery_address ?? null,
+            size: r.size ?? null,
+          })),
         }
       },
       /* On n'enregistre que ce que le visiteur a produit lui-même — comptes,

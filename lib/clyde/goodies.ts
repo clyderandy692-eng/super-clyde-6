@@ -55,6 +55,18 @@ export interface Goodie {
    * avant ce qui l'habille.
    */
   useful: boolean
+  /** Photo du produit — un catalogue sans image ne donne envie de rien. */
+  image: string
+  /**
+   * Tailles proposées quand l'article se porte. Absent pour les objets :
+   * demander une taille pour une planche d'autocollants n'a pas de sens.
+   */
+  sizes?: string[]
+  /**
+   * Article visible en boutique. On désactive, on ne supprime pas : un
+   * échange passé doit toujours pouvoir retrouver sa fiche.
+   */
+  active: boolean
 }
 
 export const GOODIES: Goodie[] = [
@@ -68,6 +80,8 @@ export const GOODIES: Goodie[] = [
     tag: { fr: 'Le premier palier', en: 'First tier' },
     cost: 40,
     useful: true,
+    image: '/images/goodies/stickers.png',
+    active: true,
   },
   {
     id: 'goodie-carnet',
@@ -79,6 +93,8 @@ export const GOODIES: Goodie[] = [
     tag: { fr: 'Utile au comptoir', en: 'Counter-ready' },
     cost: 70,
     useful: true,
+    image: '/images/goodies/carnet.png',
+    active: true,
   },
   {
     id: 'goodie-tote',
@@ -90,6 +106,8 @@ export const GOODIES: Goodie[] = [
     tag: { fr: 'Pour livrer', en: 'For deliveries' },
     cost: 90,
     useful: true,
+    image: '/images/goodies/tote.png',
+    active: true,
   },
   {
     id: 'goodie-casquette',
@@ -101,6 +119,8 @@ export const GOODIES: Goodie[] = [
     tag: { fr: 'À porter', en: 'To wear' },
     cost: 120,
     useful: false,
+    image: '/images/goodies/casquette.png',
+    active: true,
   },
   {
     id: 'goodie-tshirt',
@@ -112,6 +132,9 @@ export const GOODIES: Goodie[] = [
     tag: { fr: 'Le classique', en: 'The classic' },
     cost: 150,
     useful: false,
+    image: '/images/goodies/tshirt.png',
+    sizes: ['S', 'M', 'L', 'XL', 'XXL'],
+    active: true,
   },
   {
     id: 'goodie-tablier',
@@ -123,6 +146,9 @@ export const GOODIES: Goodie[] = [
     tag: { fr: 'Métier', en: 'Trade' },
     cost: 160,
     useful: true,
+    image: '/images/goodies/tablier.png',
+    sizes: ['M', 'L', 'XL'],
+    active: true,
   },
   {
     id: 'goodie-plaque',
@@ -134,6 +160,8 @@ export const GOODIES: Goodie[] = [
     tag: { fr: 'Le palier haut', en: 'Top tier' },
     cost: 200,
     useful: true,
+    image: '/images/goodies/plaque.png',
+    active: true,
   },
 ]
 

@@ -89,11 +89,22 @@ export function AdminFulfilment() {
                 <div className="min-w-0">
                   <p className="truncate font-semibold">
                     {goodie ? goodie.name.fr : 'Goodie'}
+                    {r.size ? ` · ${r.size}` : ''}
                   </p>
                   <p className="truncate text-xs text-muted-foreground">
                     {shop?.name ?? 'Commerce'} · {r.delivery_city} ·{' '}
                     {r.points_spent} pts
                   </p>
+                  {/* Le bon de livraison complet : sans destinataire ni
+                      téléphone, la ligne disait « livraison due » sans dire à
+                      qui ni où — indéliverable en pratique. */}
+                  {r.recipient_name || r.recipient_phone ? (
+                    <p className="truncate text-xs text-muted-foreground">
+                      {[r.recipient_name, r.recipient_phone, r.delivery_address]
+                        .filter(Boolean)
+                        .join(' · ')}
+                    </p>
+                  ) : null}
                   {r.delivery_note ? (
                     <p className="mt-1 truncate text-xs text-muted-foreground italic">
                       « {r.delivery_note} »

@@ -687,8 +687,18 @@ export interface GoodieRedemption {
   goodie_id: string
   /** Coût au moment de l'échange : un barème peut changer ensuite. */
   points_spent: number
-  /** Où livrer. Recopié depuis le commerce, qui peut déménager après. */
+  /**
+   * Coordonnées de remise, recopiées AU MOMENT de l'échange depuis le compte
+   * du commerçant — qui peut ensuite déménager ou changer de numéro sans que
+   * le colis en cours ne se perde.
+   */
+  recipient_name: string
+  recipient_phone: string
   delivery_city: string
+  /** Quartier, rue ou point de repère : indispensable en remise directe. */
+  delivery_address: string | null
+  /** Taille choisie quand l'article se porte, `null` pour les objets. */
+  size: string | null
   delivery_note: string | null
   status: 'demande' | 'preparee' | 'remise'
   created_at: string

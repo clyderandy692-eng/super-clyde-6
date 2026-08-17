@@ -35,6 +35,7 @@ export function Boutique() {
   const g = t.goodies
   const ready = useClydeReady()
   const userId = useSession((s) => s.userId)
+  const users = useClyde((s) => s.users)
   const businesses = useClyde((s) => s.businesses)
   const lessonCompletions = useClyde((s) => s.lessonCompletions)
   const certificates = useClyde((s) => s.certificates)
@@ -57,9 +58,22 @@ export function Boutique() {
       })
     : null
 
+  /* Les coordonnées de remise sont EXTRAITES du compte, pas redemandées : le
+     commerçant a déjà donné son nom, son WhatsApp et sa ville. Le formulaire
+     les présente préremplies, modifiables — livrer chez un employé reste
+     possible. */
+  const owner = userId ? (users.find((u) => u.id === userId) ?? null) : null
+  const prefill = {
+    name: owner?.name ?? '',
+    phone: business?.whatsapp_number ?? owner?.whatsapp_number ?? '',
+    city: business?.city ?? '',
+  }
+
   /* Le catalogue s'ordonne par utilité d'abord, puis par coût croissant : la
-     boutique n'est pas une vitrine de produits dérivés, c'est un outillage. */
-  const catalogue = [...GOODIES].sort((a, b) =>
+     boutique n'est pas une vitrine de produits dérivés, c'est un outillage.
+     Les articles désactivés par l'administration n'apparaissent pas — mais
+     leurs fiches restent résolubles pour les échanges passés. */
+  const catalogue = GOODIES.filter((g) => g.active).sort((a, b) =>
     a.useful !== b.useful ? (a.useful ? -1 : 1) : a.cost - b.cost,
   )
 
@@ -91,7 +105,7 @@ export function Boutique() {
                   goodie={goodie}
                   balance={balance?.balance ?? 0}
                   businessId={business?.id ?? null}
-                  defaultCity={business?.city ?? ''}
+                  prefill={prefill}
                 />
               </Reveal>
             ))}
@@ -240,17 +254,18 @@ function Scale() {
   )
 }
 
-/** Une fiche du catalogue, avec son formulaire d'échange replié. */
+/** Une fiche du catalogue, avec son bon de livraison replié. */
 function GoodieCard({
   goodie,
   balance,
   businessId,
-  defaultCity,
+  prefill,
 }: {
   goodie: Goodie
   balance: number
   businessId: string | null
-  defaultCity: string
+  /** Coordonnées connues du compte, proposées préremplies dans le bon. */
+  prefill: { name: string; phone: string; city: string }
 }) {
   const t = useT()
   const { locale } = useLocale()
@@ -258,30 +273,46 @@ function GoodieCard({
   const redeem = useClyde((s) => s.redeemGoodie)
 
   const [open, setOpen] = useState(false)
-  /* `null` tant que le formulaire n'a pas été ouvert : `useState(defaultCity)`
-     capturait la ville du PREMIER rendu, soit une chaîne vide, puisque le
-     stockage local n'est relu qu'après le montage. Le champ arrivait donc vide
-     alors que la ville du commerce était connue. On la lit à l'ouverture. */
+  /* `null` tant que le formulaire n'a pas été ouvert : `useState(prefill.x)`
+     capturerait la valeur du PREMIER rendu, soit une chaîne vide, puisque le
+     stockage local n'est relu qu'après le montage. Les champs arrivaient donc
+     vides alors que le compte était connu. On lit à l'ouverture. */
+  const [name, setName] = useState<string | null>(null)
+  const [phone, setPhone] = useState<string | null>(null)
   const [city, setCity] = useState<string | null>(null)
+  const [address, setAddress] = useState('')
+  const [size, setSize] = useState<string | null>(null)
   const [note, setNote] = useState('')
   const [failed, setFailed] = useState(false)
 
   const missing = goodie.cost - balance
   const affordable = businessId !== null && missing <= 0
-  /* Ce que le champ affiche : la saisie si elle existe, sinon la ville du
-     commerce — y compris lorsqu'elle n'est connue qu'après relecture. */
-  const cityValue = city ?? defaultCity
+  /* Ce que chaque champ affiche : la saisie si elle existe, sinon la valeur
+     du compte — y compris lorsqu'elle n'est connue qu'après relecture. */
+  const nameValue = name ?? prefill.name
+  const phoneValue = phone ?? prefill.phone
+  const cityValue = city ?? prefill.city
+  /* Premier choix présélectionné : une liste de tailles sans choix par défaut
+     laisse passer des commandes sans taille au premier clic trop rapide. */
+  const sizeValue = size ?? goodie.sizes?.[0] ?? null
 
   return (
-    <article className="flex h-full flex-col rounded-2xl border border-border bg-background p-5">
-      {/* Une seule étiquette. « Utile en boutique » vaut pour presque tous les
-          articles — répétée sur chaque carte, elle ne distinguait plus rien et
-          doublait visuellement le tag. */}
-      <span className="self-start rounded-full border border-border px-2.5 py-0.5 font-mono text-[10px] font-bold tracking-[0.14em] uppercase">
-        {bi(goodie.tag, locale)}
-      </span>
+    <article className="flex h-full flex-col overflow-hidden rounded-2xl border border-border bg-background">
+      {/* La photo d'abord : un catalogue sans image ne donne envie de rien. */}
+      <div className="relative aspect-[4/3] w-full overflow-hidden bg-secondary">
+        <img
+          src={goodie.image || '/placeholder.svg'}
+          alt={bi(goodie.name, locale)}
+          className="size-full object-cover"
+          loading="lazy"
+        />
+        <span className="absolute top-3 left-3 rounded-full border border-border bg-background/90 px-2.5 py-0.5 font-mono text-[10px] font-bold tracking-[0.14em] uppercase backdrop-blur">
+          {bi(goodie.tag, locale)}
+        </span>
+      </div>
 
-      <h3 className="mt-4 text-pretty text-lg leading-snug font-semibold">
+      <div className="flex flex-1 flex-col p-5">
+      <h3 className="text-pretty text-lg leading-snug font-semibold">
         {bi(goodie.name, locale)}
       </h3>
       <p className="mt-2 text-sm leading-relaxed text-muted-foreground">
@@ -312,32 +343,111 @@ function GoodieCard({
                 businessId: businessId!,
                 goodieId: goodie.id,
                 cost: goodie.cost,
+                recipientName: nameValue.trim(),
+                recipientPhone: phoneValue.trim(),
                 deliveryCity: cityValue.trim(),
+                deliveryAddress: address.trim() || null,
+                size: sizeValue,
                 deliveryNote: note.trim() || null,
               })
-              /* `null` : le solde a bougé entre l'ouverture du formulaire et la
-                 validation. Le contrôle vit dans le store, pas ici. */
+              /* `null` : solde insuffisant ou coordonnées incomplètes. Le
+                 contrôle vit dans le store, pas ici. */
               if (id === null) {
                 setFailed(true)
                 return
               }
               setOpen(false)
               setNote('')
+              setAddress('')
+              setName(null)
+              setPhone(null)
               setCity(null)
+              setSize(null)
             }}
             className="mt-4 rounded-xl border border-border bg-secondary p-3"
           >
             <label
-              htmlFor={`city-${goodie.id}`}
+              htmlFor={`name-${goodie.id}`}
               className="block text-[13px] font-semibold"
             >
-              {g.cityLabel}
+              {g.nameLabel}
             </label>
             <input
-              id={`city-${goodie.id}`}
-              value={cityValue}
-              onChange={(e) => setCity(e.target.value)}
+              id={`name-${goodie.id}`}
+              value={nameValue}
+              onChange={(e) => setName(e.target.value)}
               required
+              autoComplete="name"
+              className="mt-1.5 w-full rounded-lg border border-input bg-background px-3 py-2 text-sm outline-none focus-visible:border-foreground"
+            />
+
+            <label
+              htmlFor={`phone-${goodie.id}`}
+              className="mt-3 block text-[13px] font-semibold"
+            >
+              {g.phoneLabel}
+            </label>
+            <input
+              id={`phone-${goodie.id}`}
+              type="tel"
+              value={phoneValue}
+              onChange={(e) => setPhone(e.target.value)}
+              required
+              autoComplete="tel"
+              className="mt-1.5 w-full rounded-lg border border-input bg-background px-3 py-2 text-sm outline-none focus-visible:border-foreground"
+            />
+
+            <div className="mt-3 grid grid-cols-2 gap-2.5">
+              <div>
+                <label
+                  htmlFor={`city-${goodie.id}`}
+                  className="block text-[13px] font-semibold"
+                >
+                  {g.cityLabel}
+                </label>
+                <input
+                  id={`city-${goodie.id}`}
+                  value={cityValue}
+                  onChange={(e) => setCity(e.target.value)}
+                  required
+                  className="mt-1.5 w-full rounded-lg border border-input bg-background px-3 py-2 text-sm outline-none focus-visible:border-foreground"
+                />
+              </div>
+              {goodie.sizes && goodie.sizes.length > 0 ? (
+                <div>
+                  <label
+                    htmlFor={`size-${goodie.id}`}
+                    className="block text-[13px] font-semibold"
+                  >
+                    {g.sizeLabel}
+                  </label>
+                  <select
+                    id={`size-${goodie.id}`}
+                    value={sizeValue ?? ''}
+                    onChange={(e) => setSize(e.target.value)}
+                    className="mt-1.5 w-full rounded-lg border border-input bg-background px-3 py-2 text-sm outline-none focus-visible:border-foreground"
+                  >
+                    {goodie.sizes.map((s) => (
+                      <option key={s} value={s}>
+                        {s}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              ) : null}
+            </div>
+
+            <label
+              htmlFor={`address-${goodie.id}`}
+              className="mt-3 block text-[13px] font-semibold"
+            >
+              {g.addressLabel}
+            </label>
+            <input
+              id={`address-${goodie.id}`}
+              value={address}
+              onChange={(e) => setAddress(e.target.value)}
+              placeholder={g.addressPlaceholder}
               className="mt-1.5 w-full rounded-lg border border-input bg-background px-3 py-2 text-sm outline-none focus-visible:border-foreground"
             />
 
@@ -360,7 +470,9 @@ function GoodieCard({
                 role="alert"
                 className="mt-2.5 text-[13px] font-semibold text-destructive"
               >
-                {g.failed}
+                {!nameValue.trim() || !phoneValue.trim() || !cityValue.trim()
+                  ? g.incomplete
+                  : g.failed}
               </p>
             ) : null}
 
@@ -394,6 +506,7 @@ function GoodieCard({
             {g.redeem}
           </button>
         )}
+      </div>
       </div>
     </article>
   )
@@ -433,13 +546,24 @@ function Redemptions({ businessId }: { businessId: string }) {
                 key={r.id}
                 className="flex flex-wrap items-center justify-between gap-3 py-3.5"
               >
-                <div>
-                  <p className="text-sm font-semibold">
-                    {goodie ? bi(goodie.name, locale) : r.goodie_id}
-                  </p>
-                  <p className="mt-0.5 font-mono text-[11px] text-muted-foreground">
-                    {`−${r.points_spent} ${g.pointsShort} · ${r.delivery_city} · ${relativeTime(r.created_at, new Date(), locale)}`}
-                  </p>
+                <div className="flex min-w-0 items-center gap-3">
+                  {goodie ? (
+                    <img
+                      src={goodie.image || '/placeholder.svg'}
+                      alt=""
+                      className="size-11 shrink-0 rounded-lg border border-border object-cover"
+                      loading="lazy"
+                    />
+                  ) : null}
+                  <div className="min-w-0">
+                    <p className="truncate text-sm font-semibold">
+                      {goodie ? bi(goodie.name, locale) : r.goodie_id}
+                      {r.size ? ` · ${r.size}` : ''}
+                    </p>
+                    <p className="mt-0.5 truncate font-mono text-[11px] text-muted-foreground">
+                      {`−${r.points_spent} ${g.pointsShort} · ${r.delivery_city} · ${relativeTime(r.created_at, new Date(), locale)}`}
+                    </p>
+                  </div>
                 </div>
                 <span className="inline-flex items-center gap-1.5 rounded-full border border-border px-2.5 py-1 font-mono text-[10px] font-bold tracking-[0.12em] uppercase">
                   {r.status === 'remise' ? (

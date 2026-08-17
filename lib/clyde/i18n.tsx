@@ -193,7 +193,7 @@ const FR = {
   },
 
   /* La couche narrative du monde CLYDE : une section dédiée, pas une voix
-     diffusée partout. Le mouvement central est la rév��lation — flou vers
+     diffusée partout. Le mouvement central est la rév���lation — flou vers
      net, invisible vers vu. Le reste de la page garde son ton direct. */
   revelation: {
     kicker: 'La Révélation',
@@ -1029,9 +1029,15 @@ const FR = {
     redeemTitle: 'Échanger contre {goodie}',
     cost: 'Coût',
     missing: (n: number) => `Il vous manque ${n} point${n > 1 ? 's' : ''}`,
+    nameLabel: 'Nom du destinataire',
+    phoneLabel: 'Numéro WhatsApp',
     cityLabel: 'Ville de retrait',
+    addressLabel: 'Quartier ou point de repère',
+    addressPlaceholder: 'Ex. : Bastos, en face de la pharmacie.',
+    sizeLabel: 'Taille',
     noteLabel: 'Précision pour la remise (facultatif)',
-    notePlaceholder: 'Taille, couleur, ou un repère pour vous trouver.',
+    notePlaceholder: 'Couleur, ou un repère pour vous trouver.',
+    incomplete: 'Nom, numéro et ville sont nécessaires pour la remise.',
     confirm: 'Confirmer l’échange',
     cancel: 'Annuler',
     done: 'Échange enregistré. L’équipe vous contacte sur WhatsApp.',
@@ -2650,9 +2656,15 @@ const EN: Dict = {
     redeemTitle: 'Redeem for {goodie}',
     cost: 'Cost',
     missing: (n: number) => `You are ${n} point${n > 1 ? 's' : ''} short`,
+    nameLabel: 'Recipient name',
+    phoneLabel: 'WhatsApp number',
     cityLabel: 'Collection city',
+    addressLabel: 'Neighbourhood or landmark',
+    addressPlaceholder: 'E.g.: Bastos, across from the pharmacy.',
+    sizeLabel: 'Size',
     noteLabel: 'Detail for the handover (optional)',
-    notePlaceholder: 'Size, colour, or a landmark to find you.',
+    notePlaceholder: 'Colour, or a landmark to find you.',
+    incomplete: 'Name, number and city are required for the handover.',
     confirm: 'Confirm redemption',
     cancel: 'Cancel',
     done: 'Redemption recorded. The team will contact you on WhatsApp.',
