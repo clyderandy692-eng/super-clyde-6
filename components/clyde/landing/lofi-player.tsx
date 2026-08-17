@@ -30,9 +30,11 @@ function shuffledQueue() {
 export function LofiPlayer() {
   const pathname = usePathname()
   const autoplayRoutes = pathname === '/' || pathname === '/connexion' || pathname === '/inscription'
-  const creationRoute = pathname === '/onboarding' || pathname.startsWith('/tableau-de-bord/page')
-  const dashboardRoute = pathname === '/admin' || pathname.startsWith('/tableau-de-bord')
-  const visible = autoplayRoutes || creationRoute || dashboardRoute
+  /* Le lecteur vit sur les pages vitrines de CLYDE (accueil, connexion,
+     inscription) — jamais dans les outils de travail : dans le dashboard et
+     l'admin, il encombrait le coin bas-droit déjà occupé par les boutons
+     flottants du constructeur. */
+  const visible = autoplayRoutes
   const audioRef = useRef<HTMLAudioElement>(null)
   const queueRef = useRef<number[]>([0])
   const positionRef = useRef(0)

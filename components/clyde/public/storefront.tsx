@@ -438,15 +438,23 @@ export function Storefront({ slug, table, device }: { slug: string; table?: stri
           onReserve={(product) => setReserveProduct(product)}
           onBook={handleBook}
           onContact={handleContact}
+          /* Dès qu'un article entre au panier, le menu mobile s'efface en
+             glissant vers le bas et la barre de commande prend sa place —
+             il revient dès que le panier se vide. */
+          bottomNavHidden={count > 0}
         />
       </div>
 
       {/* Pile basse : message puis panier, empilés pour ne jamais se
-          recouvrir, et remontés au-dessus du menu mobile quand il existe. */}
+          recouvrir. Quand le panier contient des articles, le menu mobile
+          s'escamote et la barre de commande occupe sa place en bas — les
+          deux ne sont donc jamais visibles en même temps. */}
       <div
         className={cn(
-          'pointer-events-none fixed inset-x-4 z-50 flex flex-col items-end gap-2 sm:left-auto sm:w-sm',
-          hasBottomNav ? 'bottom-28' : 'bottom-4',
+          'pointer-events-none fixed inset-x-4 z-50 flex flex-col items-end gap-2 transition-[bottom] duration-300 sm:left-auto sm:w-sm',
+          hasBottomNav && count === 0
+            ? 'bottom-28'
+            : 'bottom-[max(1rem,env(safe-area-inset-bottom))]',
         )}
       >
         {sent && (
@@ -467,22 +475,41 @@ export function Storefront({ slug, table, device }: { slug: string; table?: stri
         )}
 
         {count > 0 && !cartOpen && (
+          /* Barre de commande : elle glisse depuis le bas à la place du menu
+             mobile, avec le total à gauche et l'action à droite. */
           <button
             type="button"
             onClick={() => setCartOpen(true)}
-            className="pointer-events-auto flex items-center gap-2.5 px-4 py-3 text-sm font-bold shadow-lg transition-transform active:scale-[0.98]"
+            className="pointer-events-auto flex w-full items-center justify-between gap-3 py-2.5 pr-2.5 pl-5 text-sm font-bold shadow-[0_18px_40px_-16px_rgba(0,0,0,0.55)] transition-transform duration-300 animate-in fade-in slide-in-from-bottom-6 active:scale-[0.99]"
             style={{
               borderRadius: 999,
-              background: theme.brand,
-              color: readableOn(theme.brand),
+              background: theme.ink,
+              color: readableOn(theme.ink),
             }}
           >
-            <ShoppingBag size={17} />
-            <span>
-              {count} article{count > 1 ? 's' : ''}
+            <span className="flex min-w-0 items-center gap-3">
+              <span className="relative shrink-0">
+                <ShoppingBag size={19} aria-hidden="true" />
+                <span
+                  className="absolute -top-2 -right-2 grid size-4 place-items-center rounded-full text-[10px] font-extrabold"
+                  style={{ background: theme.brand, color: readableOn(theme.brand) }}
+                >
+                  {count}
+                </span>
+              </span>
+              <span className="flex min-w-0 flex-col items-start leading-tight">
+                <span className="text-[15px]">{formatPrice(total, business.currency)}</span>
+                <span className="text-[11px] font-medium opacity-70">
+                  {count} article{count > 1 ? 's' : ''} au panier
+                </span>
+              </span>
             </span>
-            <span className="opacity-80">·</span>
-            <span>{formatPrice(total, business.currency)}</span>
+            <span
+              className="shrink-0 rounded-full px-5 py-2.5 text-[13px] font-bold"
+              style={{ background: theme.brand, color: readableOn(theme.brand) }}
+            >
+              Commander
+            </span>
           </button>
         )}
       </div>

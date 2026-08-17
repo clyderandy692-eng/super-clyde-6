@@ -1082,15 +1082,22 @@ function DeliveryRow({ p, ctx, block }: { p: Product; ctx: RenderCtx; block: Cat
             -{promo}%
           </span>
         )}
-        <div className="mt-auto flex items-end justify-between gap-2 pt-1">
-          <div className="flex min-w-0 items-baseline gap-1.5">
+        {/* `flex-wrap` sur le groupe prix : quand la colonne devient étroite,
+            l'ancien prix barré passe à la ligne au lieu de venir buter contre
+            le bouton d'action — le prix et le « + » gardent toujours leur
+            espace de respiration. */}
+        <div className="mt-auto flex items-end justify-between gap-3 pt-1">
+          <div className="flex min-w-0 flex-wrap items-baseline gap-x-1.5">
             {block.showPrice && (
-              <span className="text-[16px] font-extrabold" style={{ color: 'var(--p-brand)' }}>
+              <span
+                className="text-[15px] font-extrabold whitespace-nowrap"
+                style={{ color: 'var(--p-brand)' }}
+              >
                 {formatPrice(p.price, ctx.currency)}
               </span>
             )}
             {p.compare_at_price && (
-              <span className="text-[11px] line-through opacity-40">
+              <span className="text-[11px] whitespace-nowrap line-through opacity-40">
                 {formatPrice(p.compare_at_price, ctx.currency)}
               </span>
             )}

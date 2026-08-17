@@ -28,6 +28,13 @@ export interface PageRendererProps {
   onContact?: () => void
   /** Rendu autour de chaque bloc — l'éditeur y accroche sélection et poignées */
   wrapBlock?: (block: Block, node: React.ReactNode, index: number) => React.ReactNode
+  /**
+   * Escamote la navigation basse avec une glissade vers le bas.
+   * La vitrine l'active quand le panier contient des articles : la barre de
+   * commande prend alors la place du menu, et le menu revient dès que le
+   * panier se vide. Les deux barres ne cohabitent jamais.
+   */
+  bottomNavHidden?: boolean
 }
 
 /**
@@ -49,6 +56,7 @@ export function PageRenderer({
   onBook,
   onContact,
   wrapBlock,
+  bottomNavHidden = false,
 }: PageRendererProps) {
   const [search, setSearch] = useState('')
   const [category, setCategory] = useState<string | null>(null)
@@ -109,7 +117,14 @@ export function PageRenderer({
             return (
               <div
                 key={block.id}
-                className={pinned ? 'sticky bottom-0 z-40 mt-auto' : undefined}
+                className={
+                  pinned
+                    ? cn(
+                        'sticky bottom-0 z-40 mt-auto transition-all duration-300 ease-out',
+                        bottomNavHidden && 'pointer-events-none translate-y-full opacity-0',
+                      )
+                    : undefined
+                }
               >
                 {content}
               </div>

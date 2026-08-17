@@ -674,7 +674,7 @@ export function PageEditor() {
           défiler l'aperçu et la liste de blocs À L'INTÉRIEUR de leur carte.
           Avec une simple min-height, l'aperçu grandissait à la taille de son
           contenu (page entière) et rien ne défilait en interne. */}
-      <div className="grid min-h-[calc(100dvh-150px)] min-w-0 gap-5 lg:h-[calc(100dvh-150px)] lg:grid-cols-[260px_minmax(0,1fr)] 2xl:grid-cols-[260px_minmax(0,1fr)_320px]">
+      <div className="grid min-h-[calc(100dvh-150px)] min-w-0 gap-5 lg:h-[calc(100dvh-150px)] lg:grid-cols-[300px_minmax(0,1fr)] 2xl:grid-cols-[300px_minmax(0,1fr)_320px]">
         {/* Structure : carte visible sur grand écran seulement — sur téléphone
             elle vit dans le tiroir bas. */}
         <Card className="hidden min-h-0 min-w-0 flex-col overflow-hidden lg:flex">
