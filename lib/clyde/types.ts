@@ -266,6 +266,25 @@ export interface Follower {
   business_id: string
   user_id: string
   created_at: string
+  /**
+   * Preuve de consentement.
+   *
+   * Le `follower_data_notice` affiché sur la vitrine n'engageait à rien : il
+   * peut être réécrit après coup, si bien qu'on ne savait ni ce que l'abonné
+   * avait réellement accepté, ni quand. On enregistre donc les deux éléments
+   * qu'un audit réclame : l'instant du consentement, et une COPIE du texte tel
+   * qu'il était à cet instant.
+   *
+   * Copie et non référence : si le commerçant change sa notice demain, la
+   * preuve d'hier doit rester ce qui a été lu hier.
+   *
+   * Facultatifs, car les abonnements écrits avant cette version n'en ont pas ;
+   * la migration v9 les marque `import` plutôt que d'inventer une date.
+   */
+  consent_at?: string
+  consent_notice?: string
+  /** `page` : consenti sur la vitrine. `import` : antérieur à la traçabilité. */
+  consent_source?: 'page' | 'import'
 }
 
 export interface Post {

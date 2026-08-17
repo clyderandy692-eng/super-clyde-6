@@ -40,6 +40,11 @@ import {
   REFERRAL_RECEIVED_DAYS,
   REFERRAL_SENT_DAYS,
 } from './rewards'
+import {
+  anonymizeCustomer,
+  buildUserDataExport,
+  type UserDataExport,
+} from './privacy'
 import { pointsBalance } from './goodies'
 import { cartLineKey, linePrice, optionsSummary } from './options'
 import { clampRating } from './reviews'
@@ -277,6 +282,31 @@ interface ClydeState {
    * différé laisserait le commerçant sans retour au moment où il regarde.
    */
   checkFollowerMilestones: (businessId: string) => number[]
+
+  /* --- Droits sur les données (RGPD art. 15, 17 et 20) --- */
+  /**
+   * Rassemble tout ce que le système sait d'une personne, dans une forme
+   * lisible et réutilisable.
+   *
+   * Une seule fonction pour l'écran ET le fichier téléchargé : deux chemins
+   * séparés auraient divergé, et c'est précisément l'écart entre « ce qu'on
+   * montre » et « ce qu'on détient » qui rend un export non conforme.
+   */
+  exportUserData: (userId: string) => UserDataExport | null
+  /**
+   * Efface une personne et tout ce qui la désigne.
+   *
+   * Ne s'applique qu'aux comptes visiteurs : un propriétaire ne peut pas
+   * disparaître en laissant derrière lui des vitrines orphelines et des
+   * commandes que plus personne ne peut honorer. Le refus est explicite plutôt
+   * que silencieux, pour que l'écran puisse l'expliquer.
+   *
+   * Les commandes et réservations ne sont pas supprimées mais ANONYMISÉES : ce
+   * sont des pièces comptables du commerçant, qui ne lui appartiennent pas
+   * moins parce que le client s'en va. Son identité en est retirée, la trace
+   * de la transaction demeure.
+   */
+  deleteUserAccount: (userId: string) => { ok: boolean; reason?: 'owner' | 'unknown' }
 
   /* --- Formation --- */
   /**
@@ -554,7 +584,7 @@ export const useClyde = create<ClydeState>()(
     }
 
     /* Le plan appartient au compte : on n'ouvre un abonnement que si le
-       propriétaire n'en a pas déjà un. Sinon un commerçant Pro qui crée sa
+       propriétaire n'en a pas déjà un. Sinon un commerçant Pro qui cr��e sa
        deuxième page se verrait rétrograder au gratuit. */
     const hasSubscription = get().subscriptions.some(
       (s) => s.owner_id === input.ownerId,
@@ -940,6 +970,12 @@ export const useClyde = create<ClydeState>()(
       set((s) => ({ followers: s.followers.filter((f) => f.id !== existing.id) }))
       return false
     }
+    /* La notice est copiée telle qu'elle est À CET INSTANT. Garder un simple
+       renvoi vers le commerce laisserait la preuve changer avec le texte : le
+       commerçant pourrait réécrire demain ce que l'abonné a accepté hier. */
+    const notice = get().businesses.find((b) => b.id === businessId)
+      ?.follower_data_notice
+    const now = new Date().toISOString()
     set((s) => ({
       followers: [
         ...s.followers,
@@ -947,7 +983,10 @@ export const useClyde = create<ClydeState>()(
           id: uid('fo'),
           business_id: businessId,
           user_id: userId,
-          created_at: new Date().toISOString(),
+          created_at: now,
+          consent_at: now,
+          consent_notice: notice ?? DEFAULT_FOLLOWER_NOTICE,
+          consent_source: 'page',
         },
       ],
     }))
@@ -955,6 +994,54 @@ export const useClyde = create<ClydeState>()(
        arriver la récompense après le départ du commerçant de son écran. */
     get().checkFollowerMilestones(businessId)
     return true
+  },
+
+  exportUserData: (userId) => {
+    const s = get()
+    const user = s.users.find((u) => u.id === userId)
+    if (!user) return null
+    return buildUserDataExport({
+      user,
+      followers: s.followers,
+      orders: s.orders,
+      bookings: s.bookings,
+      reviews: s.reviews,
+      teamMembers: s.teamMembers,
+      businessName: (id) => s.businesses.find((b) => b.id === id)?.name ?? id,
+    })
+  },
+
+  deleteUserAccount: (userId) => {
+    const s = get()
+    const user = s.users.find((u) => u.id === userId)
+    if (!user) return { ok: false, reason: 'unknown' }
+    /* Un propriétaire emporterait ses vitrines avec lui : ses clients
+       perdraient des pages en ligne et des commandes en cours. Le cas se
+       traite en cédant ou en fermant la page d'abord, pas en le devinant ici. */
+    if (s.businesses.some((b) => b.owner_id === userId)) {
+      return { ok: false, reason: 'owner' }
+    }
+    set((state) => ({
+      users: state.users.filter((u) => u.id !== userId),
+      /* Effacé, pas anonymisé : un abonnement est un lien, il disparaît avec
+         la personne. Le compteur du commerçant baisse en conséquence — c'est
+         la traduction honnête d'un retrait de consentement. */
+      followers: state.followers.filter((f) => f.user_id !== userId),
+      reviews: state.reviews.filter((r) => r.author_user_id !== userId),
+      teamMembers: state.teamMembers.filter((m) => m.user_id !== userId),
+      postComments: state.postComments.filter(
+        (c) => c.customer_name !== (user.name ?? '\u0000'),
+      ),
+      /* Pièces comptables du commerçant : la ligne reste, l'identité s'en va. */
+      orders: state.orders.map((o) =>
+        o.customer_id === userId ? anonymizeCustomer(o) : o,
+      ),
+      bookings: state.bookings.map((b) =>
+        b.customer_id === userId ? anonymizeCustomer(b) : b,
+      ),
+      abandonedCarts: state.abandonedCarts.filter((c) => c.customer_id !== userId),
+    }))
+    return { ok: true }
   },
 
   addPost: (businessId, post) =>
@@ -1689,8 +1776,12 @@ export const useClyde = create<ClydeState>()(
          v8 : l'échange de goodie devient un bon de livraison complet
          (destinataire, téléphone, adresse, taille). Les échanges écrits en v7
          sont complétés champ à champ plutôt que jetés : les points dépensés
-         sont l'acte du visiteur. */
-      version: 8,
+         sont l'acte du visiteur.
+         v9 : l'abonnement porte la preuve de son consentement (date + copie du
+         texte accepté). Les abonnements antérieurs sont marqués `import` sans
+         date : leur inventer un horodatage fabriquerait la preuve même que ce
+         champ existe pour établir. */
+      version: 9,
       /* Les formes n'ont pas bougé, seules des valeurs de démonstration ont été
          corrigées. On repart donc des graines, en conservant ce que le visiteur
          a lui-même produit : ses comptes et ses abonnements. */
@@ -1700,7 +1791,12 @@ export const useClyde = create<ClydeState>()(
            graines juste après. */
         return {
           users: old?.users ?? [],
-          followers: old?.followers ?? [],
+          /* Le consentement manquant est déclaré tel quel : `import`, sans
+             date. Un export doit pouvoir dire « nous ne savons pas quand » —
+             c'est vérifiable, alors qu'une date reconstituée ne l'est pas. */
+          followers: (old?.followers ?? []).map((f) =>
+            f.consent_source ? f : { ...f, consent_source: 'import' as const },
+          ),
           businesses: [],
           pages: [],
           products: [],

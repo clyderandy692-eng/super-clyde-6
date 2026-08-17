@@ -28,6 +28,7 @@ import {
   DEMO_USERS,
 } from '@/lib/clyde/demo-data'
 import { Backdrop } from '@/components/clyde/backdrop'
+import { DataRights } from '@/components/clyde/customer/data-rights'
 import type { BookingStatus, OrderStatus, Product } from '@/lib/clyde/types'
 import { formatPrice } from '@/lib/clyde/taxonomy'
 import { useSession } from '@/lib/clyde/store'
@@ -292,7 +293,13 @@ export function ClientSpace() {
           ) : activeTab === 'bookings' ? (
             <BookingsPanel bookings={bookings} />
           ) : activeTab === 'follows' ? (
-            <FollowsPanel shops={followedShops} />
+            /* Les droits sur les données vivent sous les abonnements : c'est là
+               que le visiteur voit à qui il a consenti, donc là qu'il doit
+               pouvoir revenir sur ce consentement. */
+            <>
+              <FollowsPanel shops={followedShops} />
+              <DataRights />
+            </>
           ) : (
             <section className="mt-8">
               <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between"><div><h2 className="text-2xl font-bold">Vos favoris</h2><p className="mt-1 text-sm text-muted-foreground">Les produits et services à retrouver rapidement.</p></div><label className="flex items-center gap-2 rounded-full border border-border bg-card px-3 py-2 text-sm"><Search className="size-4 text-muted-foreground" aria-hidden="true" /><span className="sr-only">Rechercher dans vos favoris</span><input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Rechercher" className="w-28 bg-transparent outline-none placeholder:text-muted-foreground" /></label></div>
