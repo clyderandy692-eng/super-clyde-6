@@ -834,7 +834,13 @@ export function PageEditor() {
           défiler l'aperçu et la liste de blocs À L'INTÉRIEUR de leur carte.
           Avec une simple min-height, l'aperçu grandissait à la taille de son
           contenu (page entière) et rien ne défilait en interne. */}
-      <div className="grid min-h-[calc(100dvh-150px)] min-w-0 gap-5 lg:h-[calc(100dvh-150px)] lg:grid-cols-[300px_minmax(0,1fr)] xl:grid-cols-[300px_minmax(0,1fr)_320px]">
+      {/* Sur téléphone, pas de `min-h` calée sur la hauteur d'écran : elle
+          forçait la grille (donc l'aperçu) à dépasser sous le dock d'outils
+          flottant, qui recouvrait alors la barre basse de la vitrine simulée.
+          La grille se dimensionne au contenu, et c'est l'aperçu (ligne
+          suivante) qui borne sa propre hauteur pour rester au-dessus du dock.
+          Sur grand écran, le dock n'existe pas : la hauteur pleine revient. */}
+      <div className="grid min-w-0 gap-5 lg:h-[calc(100dvh-150px)] lg:grid-cols-[300px_minmax(0,1fr)] xl:grid-cols-[300px_minmax(0,1fr)_320px]">
         {/* Structure : carte visible sur grand écran seulement — sur téléphone
             elle vit dans le tiroir bas. */}
         <Card className="hidden min-h-0 min-w-0 flex-col overflow-hidden lg:flex">
@@ -902,7 +908,14 @@ export function PageEditor() {
             <div
               className={`clyde-mock overflow-hidden rounded-xl border shadow-sm transition-all duration-300 ${previewDevice === 'mobile' ? 'w-full max-w-[390px]' : 'w-full'}`}
             >
-              <div className="clyde-no-scrollbar h-[540px] overflow-y-auto lg:h-full lg:min-h-[540px]">
+              {/* Téléphone : la hauteur du simulateur se cale sur l'espace
+                  réellement libre entre l'en-tête de l'éditeur et le dock
+                  d'outils flottant (`~27rem` de chrome au-dessus + dock en
+                  dessous), avec un plancher pour rester utilisable sur les
+                  petits écrans. Une hauteur fixe de 540px passait sous le
+                  dock, qui masquait la barre basse de la vitrine simulée.
+                  Sur grand écran, le simulateur occupe toute la carte. */}
+              <div className="clyde-no-scrollbar h-[calc(100dvh-27rem)] min-h-[20rem] overflow-y-auto lg:h-full lg:min-h-[540px]">
                 <PageRenderer
                   key={`${previewKey}-${previewDevice}`}
                   business={business}
